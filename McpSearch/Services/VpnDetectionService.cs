@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using McpSearch.Exceptions;
 using Microsoft.Extensions.Logging;
 
 namespace McpSearch.Services;
@@ -41,6 +42,19 @@ public class VpnDetectionService
         {
             _logger.LogError(ex, "Error checking Mullvad VPN status");
             return false;
+        }
+    }
+
+    /// <summary>
+    /// Ensures that Mullvad VPN is connected.
+    /// Throws an exception if VPN is not active.
+    /// </summary>
+    /// <exception cref="VpnNotConnectedException">Thrown when Mullvad VPN is not connected.</exception>
+    public void EnsureVpnConnected()
+    {
+        if (!IsMullvadVpnActive())
+        {
+            throw new VpnNotConnectedException();
         }
     }
 
