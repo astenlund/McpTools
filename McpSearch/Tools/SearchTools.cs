@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Text.Json;
+using McpSearch.Exceptions;
+using McpSearch.Models;
 using McpSearch.Services;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
 namespace McpSearch.Tools;
@@ -11,10 +14,17 @@ namespace McpSearch.Tools;
 internal class SearchTools
 {
     private readonly SearchService _searchService;
+    private readonly VpnDetectionService _vpnDetectionService;
+    private readonly VpnDetectionSettings _vpnSettings;
 
-    public SearchTools(SearchService searchService)
+    public SearchTools(
+        SearchService searchService,
+        VpnDetectionService vpnDetectionService,
+        IOptions<VpnDetectionSettings> vpnSettings)
     {
         _searchService = searchService;
+        _vpnDetectionService = vpnDetectionService;
+        _vpnSettings = vpnSettings.Value;
     }
 
     /// <summary>
@@ -46,6 +56,12 @@ internal class SearchTools
 
         try
         {
+            // Check VPN if required
+            if (_vpnSettings.RequireVpn)
+            {
+                _vpnDetectionService.EnsureVpnConnected();
+            }
+
             var results = await _searchService.SearchAsync(query, maxResults, fetchContent);
 
             // Convert to a simple serializable format
@@ -66,6 +82,15 @@ internal class SearchTools
             return JsonSerializer.Serialize(output, new JsonSerializerOptions
             {
                 WriteIndented = true
+            });
+        }
+        catch (VpnNotConnectedException ex)
+        {
+            return JsonSerializer.Serialize(new
+            {
+                error = ex.Message,
+                query = query,
+                results = Array.Empty<object>()
             });
         }
         catch (Exception ex)
