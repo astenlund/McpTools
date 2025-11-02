@@ -1,37 +1,70 @@
-# MCP Server
+# McpSearch - DuckDuckGo Web Search MCP Server
 
-This README was created using the C# MCP server project template.
-It demonstrates how you can easily create an MCP server using C# and publish it as a NuGet package.
+A Model Context Protocol (MCP) server that provides web search capabilities using DuckDuckGo. Built with C# and designed for use with LM Studio and other MCP-compatible clients.
 
-The MCP server is built as a self-contained application and does not require the .NET runtime to be installed on the target machine.
-However, since it is self-contained, it must be built for each target platform separately.
-By default, the template is configured to build for:
-* `win-x64`
-* `win-arm64`
-* `osx-arm64`
-* `linux-x64`
-* `linux-arm64`
-* `linux-musl-x64`
+## Features
 
-If your users require more platforms to be supported, update the list of runtime identifiers in the project's `<RuntimeIdentifiers />` element.
+- 🔍 **Web Search**: Search DuckDuckGo and retrieve up to 20 results
+- 📄 **Full Content**: Optionally fetch complete HTML content from result URLs
+- 🔄 **Resilient**: Automatic retry with exponential backoff for failed requests
+- ⏱️ **Rate Limited**: Respectful delays between requests (2s for searches, 1s for content)
+- 🛡️ **Error Handling**: Graceful degradation when URLs fail to fetch
+- 📊 **Detailed Logging**: Comprehensive logging to stderr for debugging
 
-See [aka.ms/nuget/mcp/guide](https://aka.ms/nuget/mcp/guide) for the full guide.
+## Installation
 
-Please note that this template is currently in an early preview stage. If you have feedback, please take a [brief survey](http://aka.ms/dotnet-mcp-template-survey).
+### Prerequisites
 
-## Checklist before publishing to NuGet.org
+- .NET 9.0 SDK or later
+- LM Studio or another MCP-compatible client
 
-- Test the MCP server locally using the steps below.
-- Update the package metadata in the .csproj file, in particular the `<PackageId>`.
-- Update `.mcp/server.json` to declare your MCP server's inputs.
-  - See [configuring inputs](https://aka.ms/nuget/mcp/guide/configuring-inputs) for more details.
-- Pack the project using `dotnet pack`.
+### Building from Source
 
-The `bin/Release` directory will contain the package file (.nupkg), which can be [published to NuGet.org](https://learn.microsoft.com/nuget/nuget-org/publish-a-package).
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd McpSearch
+```
 
-## Developing locally
+2. Build the project:
+```bash
+cd McpSearch
+dotnet build
+```
 
-To test this MCP server from source code (locally) without using a built MCP server package, you can configure your IDE to run the project directly using `dotnet run`.
+3. Run locally for testing:
+```bash
+dotnet run
+```
+
+## Configuration
+
+### For LM Studio
+
+Add the following to LM Studio's MCP configuration file:
+
+**Location:** `%APPDATA%\LM Studio\mcp_config.json` (Windows) or `~/.lmstudio/mcp_config.json` (macOS/Linux)
+
+```json
+{
+  "mcpServers": {
+    "McpSearch": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:\\path\\to\\McpSearch\\McpSearch.csproj"
+      ]
+    }
+  }
+}
+```
+
+**Note:** Update the path to match your actual project location.
+
+### For VS Code (Copilot/GitHub Copilot)
+
+Create or update `.vscode/mcp.json` in your workspace:
 
 ```json
 {
@@ -42,57 +75,183 @@ To test this MCP server from source code (locally) without using a built MCP ser
       "args": [
         "run",
         "--project",
-        "<PATH TO PROJECT DIRECTORY>"
+        "/absolute/path/to/McpSearch/McpSearch.csproj"
       ]
     }
   }
 }
 ```
 
-## Testing the MCP Server
+### For Visual Studio (Copilot)
 
-Once configured, you can ask Copilot Chat for a random number, for example, `Give me 3 random numbers`. It should prompt you to use the `get_random_number` tool on the `McpSearch` MCP server and show you the results.
-
-## Publishing to NuGet.org
-
-1. Run `dotnet pack -c Release` to create the NuGet package
-2. Publish to NuGet.org with `dotnet nuget push bin/Release/*.nupkg --api-key <your-api-key> --source https://api.nuget.org/v3/index.json`
-
-## Using the MCP Server from NuGet.org
-
-Once the MCP server package is published to NuGet.org, you can configure it in your preferred IDE. Both VS Code and Visual Studio use the `dnx` command to download and install the MCP server package from NuGet.org.
-
-- **VS Code**: Create a `<WORKSPACE DIRECTORY>/.vscode/mcp.json` file
-- **Visual Studio**: Create a `<SOLUTION DIRECTORY>\.mcp.json` file
-
-For both VS Code and Visual Studio, the configuration file uses the following server definition:
+Create or update `.mcp.json` in your solution directory:
 
 ```json
 {
   "servers": {
     "McpSearch": {
       "type": "stdio",
-      "command": "dnx",
+      "command": "dotnet",
       "args": [
-        "<your package ID here>",
-        "--version",
-        "<your package version here>",
-        "--yes"
+        "run",
+        "--project",
+        "C:\\absolute\\path\\to\\McpSearch\\McpSearch.csproj"
       ]
     }
   }
 }
 ```
 
-## More information
+## Usage
 
-.NET MCP servers use the [ModelContextProtocol](https://www.nuget.org/packages/ModelContextProtocol) C# SDK. For more information about MCP:
+Once configured, the MCP server exposes the following tool:
 
-- [Official Documentation](https://modelcontextprotocol.io/)
-- [Protocol Specification](https://spec.modelcontextprotocol.io/)
-- [GitHub Organization](https://github.com/modelcontextprotocol)
+### `SearchWeb`
 
-Refer to the VS Code or Visual Studio documentation for more information on configuring and using MCP servers:
+Searches DuckDuckGo and returns results with optional full content.
 
-- [Use MCP servers in VS Code (Preview)](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)
-- [Use MCP servers in Visual Studio (Preview)](https://learn.microsoft.com/visualstudio/ide/mcp-servers)
+**Parameters:**
+- `query` (string, required): The search query
+- `maxResults` (int, optional): Maximum number of results (1-20, default: 10)
+- `fetchContent` (bool, optional): Whether to fetch full HTML content (default: true)
+
+**Returns:**
+```json
+{
+  "query": "C# async programming",
+  "resultCount": 10,
+  "results": [
+    {
+      "title": "Async and Await in C# - Microsoft Learn",
+      "url": "https://example.com/page",
+      "snippet": "Learn about asynchronous programming...",
+      "fullContent": "<html>...</html>",
+      "hasContent": true
+    }
+  ]
+}
+```
+
+### Example Prompts
+
+Ask your LLM assistant:
+
+- *"Search the web for the latest C# features"*
+- *"Find information about async/await patterns"*
+- *"Search for 'Model Context Protocol' and give me 5 results without full content"*
+
+## How It Works
+
+1. **Search Phase**:
+   - Scrapes DuckDuckGo's HTML version (`html.duckduckgo.com`)
+   - Parses search results using HtmlAgilityPack
+   - Extracts titles, URLs, and snippets
+   - 2-second delay after search (rate limiting)
+
+2. **Content Fetch Phase** (if enabled):
+   - Fetches full HTML from each result URL
+   - Uses Polly for retry logic (3 attempts with exponential backoff)
+   - 1-second delay between each fetch
+   - 30-second timeout per request
+   - Graceful handling of failed fetches
+
+## Rate Limiting
+
+To be respectful to DuckDuckGo's servers:
+
+- **Searches**: 2-second delay after each search
+- **Content Fetching**: 1-second delay between URL fetches
+- **Retries**: Exponential backoff (1s, 2s, 4s)
+
+## Architecture
+
+```
+McpSearch/
+├── Models/
+│   └── SearchResult.cs          # Data model for search results
+├── Services/
+│   ├── DuckDuckGoSearcher.cs    # Handles DuckDuckGo search & parsing
+│   ├── ContentFetcher.cs        # Fetches full content with retries
+│   └── SearchService.cs         # Orchestrates search + content fetching
+├── Tools/
+│   └── SearchTools.cs           # MCP tool definitions
+└── Program.cs                   # Application entry point & DI setup
+```
+
+## Development
+
+### Running Locally
+
+```bash
+cd McpSearch
+dotnet run
+```
+
+The server will start and listen on stdio for MCP protocol messages.
+
+### Building Release
+
+```bash
+dotnet build -c Release
+```
+
+### Publishing as Package
+
+```bash
+dotnet pack -c Release
+```
+
+The package will be created in `bin/Release/` and can be published to NuGet.org.
+
+## Troubleshooting
+
+### "No results found"
+
+- DuckDuckGo may have changed their HTML structure
+- Check stderr logs for parsing errors
+- Try a different search query
+
+### "Connection timeout"
+
+- Check your internet connection
+- Some URLs may be slow or unresponsive
+- Results will include partial data (URLs that succeed)
+
+### "Rate limit errors"
+
+- Built-in delays should prevent this
+- If you see rate limit warnings, increase delays in the code
+
+## Logging
+
+All logs are sent to stderr (not stdout, which is reserved for MCP protocol). Set log level in your MCP client configuration if needed.
+
+## Limitations
+
+- Uses web scraping (DuckDuckGo's official API doesn't provide search results)
+- HTML structure changes may break parsing
+- Rate limiting adds latency (necessary to be respectful)
+- Full content fetching significantly increases response time
+
+## Future Enhancements
+
+- [ ] Content extraction (remove HTML tags, keep main text)
+- [ ] Caching for repeated queries
+- [ ] Support for other search engines
+- [ ] Image search support
+- [ ] Search result filtering
+
+## License
+
+See LICENSE file for details.
+
+## Contributing
+
+Contributions are welcome! Please open an issue or pull request.
+
+## Resources
+
+- [Model Context Protocol Documentation](https://modelcontextprotocol.io/)
+- [MCP C# SDK](https://github.com/modelcontextprotocol/csharp-sdk)
+- [LM Studio MCP Guide](https://lmstudio.ai/docs/mcp)
+- [VS Code MCP Documentation](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)

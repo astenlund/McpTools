@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "McpSearch": {
+      "command": "dotnet",
+      "args": [
+        "run",
+        "--project",
+        "C:\\Git\\McpSearch\\McpSearch\\McpSearch.csproj"
+      ]
+    }
+  }
+}
