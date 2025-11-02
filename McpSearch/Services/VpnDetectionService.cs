@@ -26,20 +26,14 @@ public class VpnDetectionService
         {
             _logger.LogDebug("Checking for Mullvad VPN connection");
 
-            // Method 1: Check network adapters
+            // Check network adapters (most reliable method)
             if (CheckMullvadNetworkAdapter())
             {
                 _logger.LogInformation("Mullvad VPN detected via network adapter");
                 return true;
             }
 
-            // Method 2: Check if Mullvad daemon process is running
-            if (IsMullvadProcessRunning())
-            {
-                _logger.LogInformation("Mullvad VPN detected via running process");
-                return true;
-            }
-
+            // No active Mullvad adapter found
             _logger.LogWarning("Mullvad VPN is not active");
             return false;
         }
@@ -108,16 +102,26 @@ public class VpnDetectionService
             }
 
             // Check for Mullvad-specific indicators
-            bool isTunnelType = ni.NetworkInterfaceType == NetworkInterfaceType.Tunnel;
             bool hasMullvadKeyword = description.Contains("mullvad") || name.Contains("mullvad");
             bool hasWireGuardKeyword = description.Contains("wireguard");
             bool hasWintunKeyword = description.Contains("wintun");
+            bool isTunnelType = ni.NetworkInterfaceType == NetworkInterfaceType.Tunnel ||
+                               (int)ni.NetworkInterfaceType == 53; // Mullvad uses type 53
 
-            // Mullvad uses WireGuard or Wintun tunnel adapters
-            if (isTunnelType && (hasMullvadKeyword || hasWireGuardKeyword || hasWintunKeyword))
+            // Detect Mullvad adapter by name/description (most reliable)
+            if (hasMullvadKeyword)
             {
                 _logger.LogDebug(
-                    "Found potential Mullvad adapter: Name={Name}, Description={Description}, Type={Type}",
+                    "Found Mullvad adapter by name: Name={Name}, Description={Description}, Type={Type}",
+                    ni.Name, ni.Description, ni.NetworkInterfaceType);
+                return true;
+            }
+
+            // Also detect by WireGuard/Wintun tunnel type (fallback)
+            if (isTunnelType && (hasWireGuardKeyword || hasWintunKeyword))
+            {
+                _logger.LogDebug(
+                    "Found potential Mullvad adapter by tunnel type: Name={Name}, Description={Description}, Type={Type}",
                     ni.Name, ni.Description, ni.NetworkInterfaceType);
                 return true;
             }
