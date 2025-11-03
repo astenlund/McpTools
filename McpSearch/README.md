@@ -1,15 +1,16 @@
-# McpSearch - DuckDuckGo Web Search MCP Server
+# McpSearch - Web Search MCP Server
 
-A Model Context Protocol (MCP) server that provides web search capabilities using DuckDuckGo. Built with C# and designed for use with LM Studio and other MCP-compatible clients.
+A Model Context Protocol (MCP) server that provides web search capabilities. Built with C# and designed for use with LM Studio and other MCP-compatible clients.
 
 ## Features
 
-- 🔍 **Web Search**: Search DuckDuckGo and retrieve up to 20 results
+- 🔍 **Web Search**: Search the web and retrieve up to 20 results
 - 📄 **Full Content**: Optionally fetch complete HTML content from result URLs
 - 🔄 **Resilient**: Automatic retry with exponential backoff for failed requests
-- ⏱️ **Rate Limited**: Respectful delays between requests (2s for searches, 1s for content)
+- ⏱️ **Rate Limited**: Respectful delays between requests
 - 🛡️ **Error Handling**: Graceful degradation when URLs fail to fetch
 - 📊 **Detailed Logging**: Comprehensive logging to stderr for debugging
+- 🔑 **API Integration**: Uses Serper.dev API (2,500 free queries/month)
 
 ## Installation
 
@@ -17,6 +18,7 @@ A Model Context Protocol (MCP) server that provides web search capabilities usin
 
 - .NET 9.0 SDK or later
 - LM Studio or another MCP-compatible client
+- Serper.dev API key (free at https://serper.dev - 2,500 queries/month)
 
 ### Building from Source
 
@@ -32,7 +34,16 @@ cd McpSearch
 dotnet build
 ```
 
-3. Run locally for testing:
+3. Configure your Serper.dev API key:
+```bash
+# Option 1: Environment variable (recommended)
+export Search__SerperApiKey="your-api-key-here"
+
+# Option 2: Edit appsettings.json
+# Add: "Search": { "SerperApiKey": "your-api-key-here" }
+```
+
+4. Run locally for testing:
 ```bash
 dotnet run
 ```
@@ -108,7 +119,7 @@ Once configured, the MCP server exposes the following tool:
 
 ### `SearchWeb`
 
-Searches DuckDuckGo and returns results with optional full content.
+Searches the web and returns results with optional full content.
 
 **Parameters:**
 - `query` (string, required): The search query
@@ -143,10 +154,9 @@ Ask your LLM assistant:
 ## How It Works
 
 1. **Search Phase**:
-   - Scrapes DuckDuckGo's HTML version (`html.duckduckgo.com`)
-   - Parses search results using HtmlAgilityPack
-   - Extracts titles, URLs, and snippets
-   - 2-second delay after search (rate limiting)
+   - Queries Serper.dev API for web search results
+   - Extracts titles, URLs, and snippets from response
+   - 1-second delay after search (rate limiting)
 
 2. **Content Fetch Phase** (if enabled):
    - Fetches full HTML from each result URL
@@ -157,11 +167,12 @@ Ask your LLM assistant:
 
 ## Rate Limiting
 
-To be respectful to DuckDuckGo's servers:
+To be respectful and comply with API limits:
 
-- **Searches**: 2-second delay after each search
+- **Searches**: 1-second delay after each search
 - **Content Fetching**: 1-second delay between URL fetches
 - **Retries**: Exponential backoff (1s, 2s, 4s)
+- **API Quota**: 2,500 queries/month on free tier
 
 ## Architecture
 
@@ -170,7 +181,7 @@ McpSearch/
 ├── Models/
 │   └── SearchResult.cs          # Data model for search results
 ├── Services/
-│   ├── DuckDuckGoSearcher.cs    # Handles DuckDuckGo search & parsing
+│   ├── SerperSearcher.cs        # Handles Serper.dev API search
 │   ├── ContentFetcher.cs        # Fetches full content with retries
 │   └── SearchService.cs         # Orchestrates search + content fetching
 ├── Tools/
@@ -207,8 +218,9 @@ The package will be created in `bin/Release/` and can be published to NuGet.org.
 
 ### "No results found"
 
-- DuckDuckGo may have changed their HTML structure
-- Check stderr logs for parsing errors
+- Check that your Serper.dev API key is configured correctly
+- Verify you haven't exceeded the API quota (2,500/month on free tier)
+- Check stderr logs for API errors
 - Try a different search query
 
 ### "Connection timeout"
@@ -217,10 +229,10 @@ The package will be created in `bin/Release/` and can be published to NuGet.org.
 - Some URLs may be slow or unresponsive
 - Results will include partial data (URLs that succeed)
 
-### "Rate limit errors"
+### "API key not configured"
 
-- Built-in delays should prevent this
-- If you see rate limit warnings, increase delays in the code
+- Make sure you've set `Search:SerperApiKey` in appsettings.json or the `Search__SerperApiKey` environment variable
+- Get a free API key at https://serper.dev
 
 ## Logging
 
@@ -228,18 +240,19 @@ All logs are sent to stderr (not stdout, which is reserved for MCP protocol). Se
 
 ## Limitations
 
-- Uses web scraping (DuckDuckGo's official API doesn't provide search results)
-- HTML structure changes may break parsing
+- Requires API key and has quota limits (2,500/month on free tier)
 - Rate limiting adds latency (necessary to be respectful)
 - Full content fetching significantly increases response time
+- VPN detection currently only supports Mullvad on Windows
 
 ## Future Enhancements
 
 - [ ] Content extraction (remove HTML tags, keep main text)
 - [ ] Caching for repeated queries
-- [ ] Support for other search engines
+- [ ] Support for additional search providers
 - [ ] Image search support
 - [ ] Search result filtering
+- [ ] Cross-platform VPN detection
 
 ## License
 

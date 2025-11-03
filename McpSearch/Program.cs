@@ -21,9 +21,11 @@ builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 // Register configuration sections as options
 builder.Services.Configure<VpnDetectionSettings>(
     builder.Configuration.GetSection("VpnDetection"));
+builder.Services.Configure<SearchSettings>(
+    builder.Configuration.GetSection("Search"));
 
 // Register HttpClient instances for our services
-builder.Services.AddHttpClient<DuckDuckGoSearcher>()
+builder.Services.AddHttpClient<SerperSearcher>()
     .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
     {
         AutomaticDecompression = System.Net.DecompressionMethods.All

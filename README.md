@@ -1,14 +1,14 @@
 # McpSearch
 
-🔍 A Model Context Protocol (MCP) server that brings DuckDuckGo web search to LM Studio and other MCP clients.
+🔍 A Model Context Protocol (MCP) server that brings web search capabilities to LM Studio and other MCP clients.
 
 ## What is this?
 
-McpSearch is an MCP server that allows your local LLM (like those running in LM Studio) to search the web using DuckDuckGo. It fetches search results along with the full page content, enabling your AI assistant to access current information from the internet.
+McpSearch is an MCP server that allows your local LLM (like those running in LM Studio) to search the web. It fetches search results along with the full page content, enabling your AI assistant to access current information from the internet.
 
 ## Features
 
-✅ **Web Search** - Search DuckDuckGo directly from your LLM
+✅ **Web Search** - Search the web directly from your LLM
 ✅ **Full Content** - Optionally fetch complete HTML from result pages
 ✅ **Resilient** - Automatic retries with exponential backoff
 ✅ **Rate Limited** - Respectful delays to avoid overwhelming servers
@@ -30,7 +30,7 @@ Once configured, you can ask your LLM:
 
 > *"What are the best practices for Model Context Protocol?"*
 
-Your assistant will use the `SearchWeb` tool to fetch real-time results from DuckDuckGo!
+Your assistant will use the `SearchWeb` tool to fetch real-time results from the web!
 
 ## Installation
 
@@ -42,6 +42,23 @@ dotnet build
 ```
 
 ### 2. Configure
+
+**Important:** You'll need a Serper.dev API key (free tier: 2,500 queries/month). Get one at https://serper.dev
+
+Set your API key via environment variable or appsettings.json:
+```bash
+# Environment variable (recommended)
+export Search__SerperApiKey="your-api-key-here"
+```
+
+Or edit `McpSearch/appsettings.json`:
+```json
+{
+  "Search": {
+    "SerperApiKey": "your-api-key-here"
+  }
+}
+```
 
 Add to your MCP client's configuration file:
 
@@ -81,7 +98,7 @@ McpSearch/
 
 ## How It Works
 
-1. **Search**: Scrapes DuckDuckGo HTML and parses results
+1. **Search**: Queries a web search API to get search results
 2. **Fetch**: Retrieves full content from result URLs (optional)
 3. **Return**: Provides JSON with titles, URLs, snippets, and content
 
@@ -97,7 +114,7 @@ Rate limiting and retry logic ensure reliable, respectful operation.
 
 - **C# / .NET 9.0** - Modern, cross-platform framework
 - **Model Context Protocol** - Open standard for LLM integrations
-- **HtmlAgilityPack** - HTML parsing
+- **Serper.dev API** - Web search provider
 - **Polly** - Resilience and retry policies
 
 ## Contributing
@@ -110,4 +127,4 @@ See LICENSE file for details.
 
 ---
 
-**Note:** This project uses web scraping as DuckDuckGo's official API doesn't provide search results. Be respectful with usage - rate limiting is built in.
+**Note:** Requires a Serper.dev API key. Free tier includes 2,500 queries per month.

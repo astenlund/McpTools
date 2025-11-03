@@ -28,14 +28,14 @@ internal class SearchTools
     }
 
     /// <summary>
-    /// Searches the web using DuckDuckGo and returns results with full content.
+    /// Searches the web and returns results with full content.
     /// </summary>
     /// <param name="query">The search query string.</param>
     /// <param name="maxResults">Maximum number of results to return (default: 10, max: 20).</param>
     /// <param name="fetchContent">Whether to fetch full HTML content from result URLs (default: true).</param>
     /// <returns>JSON array of search results with title, URL, snippet, and optional full content.</returns>
     [McpServerTool]
-    [Description("Searches DuckDuckGo and returns web results with titles, URLs, snippets, and optionally full page content.")]
+    [Description("Searches the web and returns results with titles, URLs, snippets, and optionally full page content.")]
     public async Task<string> SearchWeb(
         [Description("The search query (e.g., 'C# async programming')")] string query,
         [Description("Maximum number of results to return (default: 10, max: 20)")] int maxResults = 10,

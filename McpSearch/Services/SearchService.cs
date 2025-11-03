@@ -8,12 +8,12 @@ namespace McpSearch.Services;
 /// </summary>
 public class SearchService
 {
-    private readonly DuckDuckGoSearcher _searcher;
+    private readonly SerperSearcher _searcher;
     private readonly ContentFetcher _contentFetcher;
     private readonly ILogger<SearchService> _logger;
 
     public SearchService(
-        DuckDuckGoSearcher searcher,
+        SerperSearcher searcher,
         ContentFetcher contentFetcher,
         ILogger<SearchService> logger)
     {

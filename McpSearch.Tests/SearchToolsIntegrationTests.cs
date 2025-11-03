@@ -59,21 +59,14 @@ public sealed class SearchToolsIntegrationTests : IDisposable
         Assert.NotNull(response);
         // MCP wraps tool responses in result.content[].text format
 
-        // The test passes if either:
-        // 1. Search succeeds (contains resultCount), OR
-        // 2. DuckDuckGo blocks the VPN IP with 403 (expected when using VPN)
-        var hasResults = response.Contains("resultCount");
-        var isBlocked = response.Contains("403") || response.Contains("Forbidden");
+        // With SearXNG, search should succeed
+        Assert.Contains("resultCount", response);
 
-        // At least one should be true (either success or expected block)
-        Assert.True(hasResults || isBlocked,
-            $"Expected either successful results or 403 block, but got: {response.Substring(0, Math.Min(200, response.Length))}");
+        // Should have at least some results
+        Assert.DoesNotContain("\"resultCount\": 0", response.Replace(" ", ""));
 
-        // If it succeeded, verify no errors
-        if (hasResults)
-        {
-            Assert.DoesNotContain("error", response);
-        }
+        // Should not have any errors
+        Assert.DoesNotContain("\"error\"", response);
     }
 
     [Fact]
@@ -117,18 +110,17 @@ public sealed class SearchToolsIntegrationTests : IDisposable
 
         Assert.NotNull(response);
 
-        // The test passes if either:
-        // 1. Search succeeds (contains resultCount), OR
-        // 2. DuckDuckGo blocks with 403 (can happen even without VPN)
-        var hasResults = response.Contains("resultCount");
-        var isBlocked = response.Contains("403") || response.Contains("Forbidden");
+        // With SearXNG, search should succeed even without VPN
+        Assert.Contains("resultCount", response);
+
+        // Should have at least some results
+        Assert.DoesNotContain("\"resultCount\": 0", response.Replace(" ", ""));
 
         // Should NOT contain VPN error message
         Assert.DoesNotContain("Mullvad VPN is not active", response);
 
-        // At least one should be true (either success or block)
-        Assert.True(hasResults || isBlocked,
-            $"Expected either successful results or 403 block, but got: {response.Substring(0, Math.Min(200, response.Length))}");
+        // Should not have any errors
+        Assert.DoesNotContain("\"error\"", response);
     }
 
     [Fact]
