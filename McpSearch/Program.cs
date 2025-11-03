@@ -22,8 +22,16 @@ builder.Services.Configure<VpnDetectionSettings>(
     builder.Configuration.GetSection("VpnDetection"));
 
 // Register HttpClient instances for our services
-builder.Services.AddHttpClient<DuckDuckGoSearcher>();
-builder.Services.AddHttpClient<ContentFetcher>();
+builder.Services.AddHttpClient<DuckDuckGoSearcher>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.All
+    });
+builder.Services.AddHttpClient<ContentFetcher>()
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
+    {
+        AutomaticDecompression = System.Net.DecompressionMethods.All
+    });
 
 // Register our services
 builder.Services.AddSingleton<VpnDetectionService>();

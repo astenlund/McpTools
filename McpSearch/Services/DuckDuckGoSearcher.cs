@@ -17,11 +17,36 @@ public class DuckDuckGoSearcher
         _httpClient = httpClient;
         _logger = logger;
 
-        // Set User-Agent to avoid being blocked
+        // Set browser-like headers to avoid being blocked by DuckDuckGo
         if (!_httpClient.DefaultRequestHeaders.Contains("User-Agent"))
         {
             _httpClient.DefaultRequestHeaders.Add("User-Agent",
                 "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("Accept"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Accept",
+                "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("Accept-Language"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.9");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("Accept-Encoding"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate, br");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("DNT"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("DNT", "1");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("Connection"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Connection", "keep-alive");
+        }
+        if (!_httpClient.DefaultRequestHeaders.Contains("Upgrade-Insecure-Requests"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("Upgrade-Insecure-Requests", "1");
         }
     }
 
@@ -46,11 +71,20 @@ public class DuckDuckGoSearcher
 
         try
         {
-            // Build the search URL
-            var searchUrl = $"https://html.duckduckgo.com/html/?q={Uri.EscapeDataString(query)}";
+            // Use POST instead of GET (less likely to be blocked)
+            var searchUrl = "https://html.duckduckgo.com/html/";
 
-            // Fetch the HTML
-            var html = await _httpClient.GetStringAsync(searchUrl, cancellationToken);
+            var formContent = new FormUrlEncodedContent(new[]
+            {
+                new KeyValuePair<string, string>("q", query),
+                new KeyValuePair<string, string>("b", ""), // Empty "next" parameter
+                new KeyValuePair<string, string>("kl", "us-en") // Language/region
+            });
+
+            var response = await _httpClient.PostAsync(searchUrl, formContent, cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            var html = await response.Content.ReadAsStringAsync(cancellationToken);
 
             // Parse the results
             var results = ParseSearchResults(html, maxResults);
