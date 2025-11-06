@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using McpSearch.Exceptions;
 using McpSearch.Models;
 using McpSearch.Services;
@@ -17,6 +16,10 @@ internal class SearchTools
     private readonly VpnDetectionService _vpnDetectionService;
     private readonly VpnDetectionSettings _vpnSettings;
 
+    // Track recent searches to prevent loops (query -> timestamp)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _recentSearches = new();
+    private static readonly TimeSpan _duplicateWindow = TimeSpan.FromSeconds(30);
+
     public SearchTools(
         SearchService searchService,
         VpnDetectionService vpnDetectionService,
@@ -32,23 +35,44 @@ internal class SearchTools
     /// </summary>
     /// <param name="query">The search query string.</param>
     /// <param name="maxResults">Maximum number of results to return (default: 10, max: 20).</param>
-    /// <param name="fetchContent">Whether to fetch full HTML content from result URLs (default: true).</param>
+    /// <param name="fetchContent">Whether to fetch full HTML content from result URLs (default: false).</param>
     /// <returns>JSON array of search results with title, URL, snippet, and optional full content.</returns>
     [McpServerTool]
-    [Description("Searches the web and returns results with titles, URLs, snippets, and optionally full page content.")]
+    [Description("Searches the web and returns complete results with titles, URLs, and snippets. Call this tool ONCE per query - it returns all needed information. Do not call again unless answering a new user question.")]
     public async Task<string> SearchWeb(
         [Description("The search query (e.g., 'C# async programming')")] string query,
         [Description("Maximum number of results to return (default: 10, max: 20)")] int maxResults = 10,
-        [Description("Whether to fetch full HTML content from each result URL (default: true)")] bool fetchContent = true)
+        [Description("Whether to fetch full HTML content from each result URL (default: false)")] bool fetchContent = false)
     {
         // Validate inputs
         if (string.IsNullOrWhiteSpace(query))
         {
-            return JsonSerializer.Serialize(new
+            return "Error: Search query cannot be empty.";
+        }
+
+        // Check for duplicate search within time window
+        var normalizedQuery = query.Trim().ToLowerInvariant();
+        var now = DateTime.UtcNow;
+
+        if (_recentSearches.TryGetValue(normalizedQuery, out var lastSearchTime))
+        {
+            var timeSinceLastSearch = now - lastSearchTime;
+            if (timeSinceLastSearch < _duplicateWindow)
             {
-                error = "Query cannot be empty",
-                results = Array.Empty<object>()
-            });
+                return $"DUPLICATE SEARCH DETECTED: This exact query \"{query}\" was already searched {timeSinceLastSearch.TotalSeconds:F0} seconds ago. " +
+                       $"The results are already available above. DO NOT search again. Use the previous search results to answer the user's question.";
+            }
+        }
+
+        // Update last search time
+        _recentSearches[normalizedQuery] = now;
+
+        // Cleanup old entries (older than 5 minutes)
+        var cutoffTime = now.Subtract(TimeSpan.FromMinutes(5));
+        var oldEntries = _recentSearches.Where(kvp => kvp.Value < cutoffTime).Select(kvp => kvp.Key).ToList();
+        foreach (var oldEntry in oldEntries)
+        {
+            _recentSearches.TryRemove(oldEntry, out _);
         }
 
         // Limit maxResults to reasonable range
@@ -64,43 +88,42 @@ internal class SearchTools
 
             var results = await _searchService.SearchAsync(query, maxResults, fetchContent);
 
-            // Convert to a simple serializable format
-            var output = new
-            {
-                query = query,
-                resultCount = results.Count,
-                results = results.Select(r => new
-                {
-                    title = r.Title,
-                    url = r.Url,
-                    snippet = r.Snippet,
-                    fullContent = fetchContent ? r.FullContent : null,
-                    hasContent = r.FullContent != null
-                }).ToList()
-            };
+            // Format as human-readable text for better LLM comprehension
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine($"Search completed successfully. Found {results.Count} results for \"{query}\":");
+            sb.AppendLine();
 
-            return JsonSerializer.Serialize(output, new JsonSerializerOptions
+            for (int i = 0; i < results.Count; i++)
             {
-                WriteIndented = true
-            });
+                var result = results[i];
+                sb.AppendLine($"{i + 1}. {result.Title}");
+                sb.AppendLine($"   URL: {result.Url}");
+                sb.AppendLine($"   {result.Snippet}");
+
+                if (fetchContent && !string.IsNullOrEmpty(result.FullContent))
+                {
+                    // Truncate full content to avoid overwhelming the LLM
+                    var content = result.FullContent.Length > 1000
+                        ? result.FullContent.Substring(0, 1000) + "..."
+                        : result.FullContent;
+                    sb.AppendLine($"   Content preview: {content}");
+                }
+
+                sb.AppendLine();
+            }
+
+            sb.AppendLine("---");
+            sb.AppendLine($"Search complete. Use the information above to answer the user's question. Do not search again unless the user asks a new question.");
+
+            return sb.ToString();
         }
         catch (VpnNotConnectedException ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                error = ex.Message,
-                query = query,
-                results = Array.Empty<object>()
-            });
+            return $"Search unavailable: {ex.Message}";
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new
-            {
-                error = $"Search failed: {ex.Message}",
-                query = query,
-                results = Array.Empty<object>()
-            });
+            return $"Search failed for \"{query}\": {ex.Message}";
         }
     }
 }
