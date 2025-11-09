@@ -512,6 +512,79 @@ public sealed class McpWebIntegrationTests : IDisposable
         Assert.DoesNotContain("Error retrieving context", response);
     }
 
+    [Fact]
+    public async Task SearchWeb_FailedSearch_DoesNotTriggerDuplicateDetection()
+    {
+        // Arrange - This test verifies that failed searches don't count toward rate limiting
+        StartMcpServer(requireVpn: false);
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act 1 - Send invalid search (empty query) - should fail
+        var request1 = new
+        {
+            jsonrpc = "2.0",
+            id = 10,
+            method = "tools/call",
+            @params = new
+            {
+                name = "search_web",
+                arguments = new
+                {
+                    query = "",  // Empty query - will fail validation
+                    maxResults = 5,
+                    fetchContent = false
+                }
+            }
+        };
+
+        var requestJson1 = JsonSerializer.Serialize(request1);
+        _output.WriteLine($"First request (should fail): {requestJson1}");
+
+        await SendToServer(requestJson1);
+
+        var response1 = await ReadFromServer();
+        _output.WriteLine($"First response: {response1}");
+
+        Assert.NotNull(response1);
+        Assert.Contains("Error: Search query cannot be empty", response1);
+
+        // Act 2 - Send the same invalid search again immediately
+        var request2 = new
+        {
+            jsonrpc = "2.0",
+            id = 11,
+            method = "tools/call",
+            @params = new
+            {
+                name = "search_web",
+                arguments = new
+                {
+                    query = "",  // Same empty query
+                    maxResults = 5,
+                    fetchContent = false
+                }
+            }
+        };
+
+        var requestJson2 = JsonSerializer.Serialize(request2);
+        _output.WriteLine($"Second request (should also fail, NOT be blocked by duplicate detection): {requestJson2}");
+
+        await SendToServer(requestJson2);
+
+        var response2 = await ReadFromServer();
+        _output.WriteLine($"Second response: {response2}");
+
+        // Assert - Second request should get the same error, NOT "DUPLICATE SEARCH DETECTED"
+        Assert.NotNull(response2);
+        Assert.Contains("Error: Search query cannot be empty", response2);
+        Assert.DoesNotContain("DUPLICATE SEARCH DETECTED", response2);
+    }
+
     public void Dispose()
     {
         if (_serverProcess is { HasExited: false })

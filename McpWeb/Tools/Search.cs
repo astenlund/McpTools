@@ -64,9 +64,6 @@ internal class Search
             }
         }
 
-        // Update last search time
-        _recentSearches[normalizedQuery] = now;
-
         // Cleanup old entries (older than 5 minutes)
         var cutoffTime = now.Subtract(TimeSpan.FromMinutes(5));
         var oldEntries = _recentSearches.Where(kvp => kvp.Value < cutoffTime).Select(kvp => kvp.Key).ToList();
@@ -87,6 +84,9 @@ internal class Search
             }
 
             var results = await _searchService.SearchAsync(query, maxResults, fetchContent);
+
+            // Update last search time ONLY after successful search
+            _recentSearches[normalizedQuery] = now;
 
             // Format as human-readable text for better LLM comprehension
             var sb = new System.Text.StringBuilder();
