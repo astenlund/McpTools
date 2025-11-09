@@ -46,6 +46,7 @@ builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
     .WithTools<Search>()
-    .WithTools<Fetch>();
+    .WithTools<Fetch>()
+    .WithTools<Context>();
 
 await builder.Build().RunAsync();

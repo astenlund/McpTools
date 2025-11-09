@@ -466,6 +466,52 @@ public sealed class McpWebIntegrationTests : IDisposable
         Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
     }
 
+    [Fact]
+    public async Task GetContext_ReturnsCurrentDateTimeAndTimezone()
+    {
+        // Arrange
+        StartMcpServer();
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act - Send MCP tool call request for get_context
+        var request = new
+        {
+            jsonrpc = "2.0",
+            id = 5,
+            method = "tools/call",
+            @params = new
+            {
+                name = "get_context",  // MCP converts C# method names to snake_case
+                arguments = new { }  // No arguments needed
+            }
+        };
+
+        var requestJson = JsonSerializer.Serialize(request);
+        _output.WriteLine($"Request: {requestJson}");
+
+        await SendToServer(requestJson);
+
+        // Assert - Read response
+        var response = await ReadFromServer();
+        _output.WriteLine($"Response: {response}");
+
+        Assert.NotNull(response);
+
+        // Should contain context information in concise format
+        Assert.Contains("Current date and time:", response);
+        Assert.Contains("Timezone:", response);
+        Assert.Contains("week", response);  // lowercase in "This is week X of YYYY"
+        Assert.Contains("of 2025", response);  // Current year
+
+        // Should not have any errors
+        Assert.DoesNotContain("Error retrieving context", response);
+    }
+
     public void Dispose()
     {
         if (_serverProcess is { HasExited: false })

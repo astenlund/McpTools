@@ -1,15 +1,16 @@
 # McpWeb
 
-🔍 A Model Context Protocol (MCP) server that brings web search and URL fetching capabilities to LM Studio and other MCP clients.
+🔍 A Model Context Protocol (MCP) server that brings web search, URL fetching, and temporal context capabilities to LM Studio and other MCP clients.
 
 ## What is this?
 
-McpWeb is an MCP server that allows your local LLM (like those running in LM Studio) to search the web and fetch content from specific URLs. It provides search results with full page content, enabling your AI assistant to access current information from the internet.
+McpWeb is an MCP server that allows your local LLM (like those running in LM Studio) to search the web, fetch content from specific URLs, and access current date/time information. It provides search results with full page content and temporal context, enabling your AI assistant to access current information from the internet with accurate date awareness.
 
 ## Features
 
 ✅ **Web Search** - Search the web directly from your LLM using Serper.dev
 ✅ **URL Fetching** - Fetch full HTML content from specific URLs
+✅ **Temporal Context** - Get current date, time, timezone, and week information
 ✅ **Full Content** - Optionally fetch complete HTML from search result pages
 ✅ **Security** - SSRF prevention (blocks localhost/private IPs)
 ✅ **Optional VPN** - Configurable VPN requirement per tool (search/fetch)
@@ -37,7 +38,14 @@ Once configured, you can ask your LLM:
 
 > *"Get me the HTML from this documentation page: https://docs.microsoft.com/..."*
 
-Your assistant will use the `search_web` and `fetch_url` tools to access real-time web content!
+**Temporal Context:**
+> *"What's today's date?"*
+
+> *"What year is it right now?"*
+
+> *"Search for tech news from this week"* (LLM will use get_context to know the current date)
+
+Your assistant will use the `search_web`, `fetch_url`, and `get_context` tools to access real-time web content with accurate date awareness!
 
 ## Installation
 
@@ -128,7 +136,7 @@ McpTools/
 ├── McpWeb/                 # Main C# project
 │   ├── Models/            # Data models and settings
 │   ├── Services/          # Search, VPN detection, content fetching
-│   ├── Tools/             # MCP tool definitions (Search, Fetch)
+│   ├── Tools/             # MCP tool definitions (Search, Fetch, Context)
 │   └── Program.cs         # Entry point and DI configuration
 ├── McpWeb.Tests/          # Integration tests
 ├── CLAUDE.md              # Detailed documentation and architecture
@@ -143,7 +151,7 @@ McpTools/
 
 ## How It Works
 
-**Two MCP Tools Provided:**
+**Three MCP Tools Provided:**
 
 1. **`search_web`** - Web search via Serper.dev API
    - Queries search engine for results
@@ -154,6 +162,12 @@ McpTools/
    - Fetches full HTML from a specific URL
    - SSRF protection (blocks localhost/private IPs)
    - Returns complete HTML content
+
+3. **`get_context`** - Current date/time/timezone information
+   - Returns current date and time
+   - Provides timezone name and UTC offset
+   - Includes day of week and week number
+   - Helps LLMs use accurate dates in queries and responses
 
 Rate limiting, retry logic, and security validation ensure reliable, safe operation.
 
