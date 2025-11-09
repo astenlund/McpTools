@@ -1,4 +1,4 @@
-namespace McpSearch.Models;
+namespace McpWeb.Models;
 
 /// <summary>
 /// Represents a single search result from DuckDuckGo.

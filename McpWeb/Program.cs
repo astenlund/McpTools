@@ -1,6 +1,6 @@
-using McpSearch.Models;
-using McpSearch.Services;
-using McpSearch.Tools;
+using McpWeb.Models;
+using McpWeb.Services;
+using McpWeb.Tools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +12,7 @@ var builder = Host.CreateApplicationBuilder(args);
 builder.Configuration
     .SetBasePath(Directory.GetCurrentDirectory())
     .AddJsonFile("appsettings.json", optional: true, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
     .AddEnvironmentVariables()
     .AddCommandLine(args);
 
@@ -19,10 +20,10 @@ builder.Configuration
 builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 
 // Register configuration sections as options
-builder.Services.Configure<VpnDetectionSettings>(
-    builder.Configuration.GetSection("VpnDetection"));
 builder.Services.Configure<SearchSettings>(
     builder.Configuration.GetSection("Search"));
+builder.Services.Configure<FetchSettings>(
+    builder.Configuration.GetSection("Fetch"));
 
 // Register HttpClient instances for our services
 builder.Services.AddHttpClient<SerperSearcher>()
@@ -44,6 +45,7 @@ builder.Services.AddSingleton<SearchService>();
 builder.Services
     .AddMcpServer()
     .WithStdioServerTransport()
-    .WithTools<SearchTools>();
+    .WithTools<Search>()
+    .WithTools<Fetch>();
 
 await builder.Build().RunAsync();

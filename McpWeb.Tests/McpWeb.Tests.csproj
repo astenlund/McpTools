@@ -19,7 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\McpSearch\McpSearch.csproj" />
+    <ProjectReference Include="..\McpWeb\McpWeb.csproj" />
   </ItemGroup>
 
 </Project>

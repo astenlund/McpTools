@@ -1,9 +1,9 @@
 using System.Diagnostics;
 using System.Net.NetworkInformation;
-using McpSearch.Exceptions;
+using McpWeb.Exceptions;
 using Microsoft.Extensions.Logging;
 
-namespace McpSearch.Services;
+namespace McpWeb.Services;
 
 /// <summary>
 /// Service for detecting if Mullvad VPN is active on Windows.

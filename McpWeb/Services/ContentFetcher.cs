@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Retry;
 
-namespace McpSearch.Services;
+namespace McpWeb.Services;
 
 /// <summary>
 /// Service for fetching full content from URLs with retry logic and rate limiting.

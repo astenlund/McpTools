@@ -62,3 +62,7 @@ desktop.ini
 *.tmp
 *.temp
 *~
+
+# Sensitive configuration files
+appsettings.Development.json
+appsettings.Local.json

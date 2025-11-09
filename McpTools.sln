@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpSearch", "McpSearch\McpSearch.csproj", "{5C4C1728-31B6-4056-8EC4-DCDC04901AB1}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpWeb", "McpWeb\McpWeb.csproj", "{5C4C1728-31B6-4056-8EC4-DCDC04901AB1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpSearch.Tests", "McpSearch.Tests\McpSearch.Tests.csproj", "{04C343D1-0A45-4C28-B8FD-394B6764B345}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpWeb.Tests", "McpWeb.Tests\McpWeb.Tests.csproj", "{04C343D1-0A45-4C28-B8FD-394B6764B345}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

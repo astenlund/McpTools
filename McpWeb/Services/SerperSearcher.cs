@@ -1,10 +1,10 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using McpSearch.Models;
+using McpWeb.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace McpSearch.Services;
+namespace McpWeb.Services;
 
 /// <summary>
 /// Service for searching the web using Serper.dev API.

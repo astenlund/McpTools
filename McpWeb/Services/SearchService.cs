@@ -1,7 +1,7 @@
-using McpSearch.Models;
+using McpWeb.Models;
 using Microsoft.Extensions.Logging;
 
-namespace McpSearch.Services;
+namespace McpWeb.Services;
 
 /// <summary>
 /// Combined service that coordinates searching and content fetching.

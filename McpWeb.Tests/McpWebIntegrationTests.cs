@@ -2,17 +2,18 @@ using System.Diagnostics;
 using System.Text.Json;
 using Xunit.Abstractions;
 
-namespace McpSearch.Tests;
+namespace McpWeb.Tests;
 
 /// <summary>
 /// Integration tests that start the actual MCP server and communicate with it.
+/// Tests both search_web and fetch_url tools.
 /// </summary>
-public sealed class SearchToolsIntegrationTests : IDisposable
+public sealed class McpWebIntegrationTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private Process? _serverProcess;
 
-    public SearchToolsIntegrationTests(ITestOutputHelper output)
+    public McpWebIntegrationTests(ITestOutputHelper output)
     {
         _output = output;
     }
@@ -59,14 +60,13 @@ public sealed class SearchToolsIntegrationTests : IDisposable
         Assert.NotNull(response);
         // MCP wraps tool responses in result.content[].text format
 
-        // With SearXNG, search should succeed
-        Assert.Contains("resultCount", response);
-
-        // Should have at least some results
-        Assert.DoesNotContain("\"resultCount\": 0", response.Replace(" ", ""));
+        // Search should succeed with human-readable text
+        Assert.Contains("Search completed successfully", response);
+        Assert.Contains("results for", response);
 
         // Should not have any errors
-        Assert.DoesNotContain("\"error\"", response);
+        Assert.DoesNotContain("Search unavailable", response);
+        Assert.DoesNotContain("Search failed", response);
     }
 
     [Fact]
@@ -110,17 +110,16 @@ public sealed class SearchToolsIntegrationTests : IDisposable
 
         Assert.NotNull(response);
 
-        // With SearXNG, search should succeed even without VPN
-        Assert.Contains("resultCount", response);
-
-        // Should have at least some results
-        Assert.DoesNotContain("\"resultCount\": 0", response.Replace(" ", ""));
+        // Search should succeed even without VPN
+        Assert.Contains("Search completed successfully", response);
+        Assert.Contains("results for", response);
 
         // Should NOT contain VPN error message
-        Assert.DoesNotContain("Mullvad VPN is not active", response);
+        Assert.DoesNotContain("connect to Mullvad VPN", response);
 
         // Should not have any errors
-        Assert.DoesNotContain("\"error\"", response);
+        Assert.DoesNotContain("Search unavailable", response);
+        Assert.DoesNotContain("Search failed", response);
     }
 
     [Fact]
@@ -164,9 +163,9 @@ public sealed class SearchToolsIntegrationTests : IDisposable
 
         Assert.NotNull(response);
         // MCP wraps tool responses in result.content[].text format
-        // The actual error JSON is inside the text field
-        Assert.Contains("Mullvad VPN is not active", response);
-        Assert.Contains("results", response);  // Verify results field is present
+        // Should contain VPN error message
+        Assert.Contains("connect to Mullvad VPN", response);
+        Assert.Contains("Search unavailable", response);
     }
 
     private void StartMcpServer(bool? requireVpn = null)
@@ -177,8 +176,8 @@ public sealed class SearchToolsIntegrationTests : IDisposable
             "..",
             "..",
             "..",
-            "McpSearch",
-            "McpSearch.csproj");
+            "McpWeb",
+            "McpWeb.csproj");
 
         _output.WriteLine($"Starting MCP server from: {projectPath}");
 
@@ -196,11 +195,15 @@ public sealed class SearchToolsIntegrationTests : IDisposable
             }
         };
 
+        // Set environment to Development so appsettings.Development.json is loaded
+        _serverProcess.StartInfo.EnvironmentVariables["DOTNET_ENVIRONMENT"] = "Development";
+        _output.WriteLine("Setting DOTNET_ENVIRONMENT=Development");
+
         // Override VPN requirement via environment variable if specified
         if (requireVpn.HasValue)
         {
-            _serverProcess.StartInfo.EnvironmentVariables["VpnDetection__RequireVpn"] = requireVpn.Value.ToString();
-            _output.WriteLine($"Setting VpnDetection__RequireVpn={requireVpn.Value}");
+            _serverProcess.StartInfo.EnvironmentVariables["Search__RequireVpn"] = requireVpn.Value.ToString();
+            _output.WriteLine($"Setting Search__RequireVpn={requireVpn.Value}");
         }
 
         // Capture stderr for debugging
@@ -294,6 +297,173 @@ public sealed class SearchToolsIntegrationTests : IDisposable
         // Read tools list response
         var toolsListResponse = await ReadFromServer();
         _output.WriteLine($"Tools list response: {toolsListResponse}");
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithValidUrl_ReturnsContent()
+    {
+        // Arrange
+        StartMcpServer();
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act - Send MCP tool call request to fetch example.com
+        var request = new
+        {
+            jsonrpc = "2.0",
+            id = 4,
+            method = "tools/call",
+            @params = new
+            {
+                name = "fetch_url",  // MCP converts C# method names to snake_case
+                arguments = new
+                {
+                    url = "https://example.com"
+                }
+            }
+        };
+
+        var requestJson = JsonSerializer.Serialize(request);
+        _output.WriteLine($"Request: {requestJson}");
+
+        await SendToServer(requestJson);
+
+        // Assert - Read response
+        var response = await ReadFromServer();
+        _output.WriteLine($"Response: {response}");
+
+        Assert.NotNull(response);
+
+        // Should contain HTML content from example.com
+        Assert.Contains("Example Domain", response);
+        Assert.DoesNotContain("Error:", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithInvalidUrl_ReturnsError()
+    {
+        // Arrange
+        StartMcpServer();
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act - Send MCP tool call request with invalid URL
+        var request = new
+        {
+            jsonrpc = "2.0",
+            id = 4,
+            method = "tools/call",
+            @params = new
+            {
+                name = "fetch_url",
+                arguments = new
+                {
+                    url = "not a valid url"
+                }
+            }
+        };
+
+        var requestJson = JsonSerializer.Serialize(request);
+        _output.WriteLine($"Request: {requestJson}");
+
+        await SendToServer(requestJson);
+
+        // Assert - Read response
+        var response = await ReadFromServer();
+        _output.WriteLine($"Response: {response}");
+
+        Assert.NotNull(response);
+        Assert.Contains("Error: Invalid URL format", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithLocalhostUrl_ReturnsError()
+    {
+        // Arrange
+        StartMcpServer();
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act - Send MCP tool call request with localhost URL (SSRF prevention test)
+        var request = new
+        {
+            jsonrpc = "2.0",
+            id = 4,
+            method = "tools/call",
+            @params = new
+            {
+                name = "fetch_url",
+                arguments = new
+                {
+                    url = "http://localhost:8080/admin"
+                }
+            }
+        };
+
+        var requestJson = JsonSerializer.Serialize(request);
+        _output.WriteLine($"Request: {requestJson}");
+
+        await SendToServer(requestJson);
+
+        // Assert - Read response
+        var response = await ReadFromServer();
+        _output.WriteLine($"Response: {response}");
+
+        Assert.NotNull(response);
+        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithPrivateIpUrl_ReturnsError()
+    {
+        // Arrange
+        StartMcpServer();
+
+        // Wait for server to initialize
+        await Task.Delay(2000);
+
+        // Initialize MCP protocol
+        await InitializeMcpProtocol();
+
+        // Act - Send MCP tool call request with private IP (SSRF prevention test)
+        var request = new
+        {
+            jsonrpc = "2.0",
+            id = 4,
+            method = "tools/call",
+            @params = new
+            {
+                name = "fetch_url",
+                arguments = new
+                {
+                    url = "http://192.168.1.1/router"
+                }
+            }
+        };
+
+        var requestJson = JsonSerializer.Serialize(request);
+        _output.WriteLine($"Request: {requestJson}");
+
+        await SendToServer(requestJson);
+
+        // Assert - Read response
+        var response = await ReadFromServer();
+        _output.WriteLine($"Response: {response}");
+
+        Assert.NotNull(response);
+        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
     }
 
     public void Dispose()

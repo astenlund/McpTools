@@ -1,33 +1,33 @@
 using System.ComponentModel;
-using McpSearch.Exceptions;
-using McpSearch.Models;
-using McpSearch.Services;
+using McpWeb.Exceptions;
+using McpWeb.Models;
+using McpWeb.Services;
 using Microsoft.Extensions.Options;
 using ModelContextProtocol.Server;
 
-namespace McpSearch.Tools;
+namespace McpWeb.Tools;
 
 /// <summary>
-/// MCP tools for web search functionality.
+/// MCP tool for web search functionality.
 /// </summary>
-internal class SearchTools
+internal class Search
 {
     private readonly SearchService _searchService;
     private readonly VpnDetectionService _vpnDetectionService;
-    private readonly VpnDetectionSettings _vpnSettings;
+    private readonly SearchSettings _searchSettings;
 
     // Track recent searches to prevent loops (query -> timestamp)
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTime> _recentSearches = new();
     private static readonly TimeSpan _duplicateWindow = TimeSpan.FromSeconds(30);
 
-    public SearchTools(
+    public Search(
         SearchService searchService,
         VpnDetectionService vpnDetectionService,
-        IOptions<VpnDetectionSettings> vpnSettings)
+        IOptions<SearchSettings> searchSettings)
     {
         _searchService = searchService;
         _vpnDetectionService = vpnDetectionService;
-        _vpnSettings = vpnSettings.Value;
+        _searchSettings = searchSettings.Value;
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ internal class SearchTools
         try
         {
             // Check VPN if required
-            if (_vpnSettings.RequireVpn)
+            if (_searchSettings.RequireVpn)
             {
                 _vpnDetectionService.EnsureVpnConnected();
             }
