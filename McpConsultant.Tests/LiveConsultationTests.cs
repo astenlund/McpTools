@@ -75,7 +75,11 @@ public sealed class LiveConsultationTests(ITestOutputHelper output) : McpConsult
         Assert.DoesNotContain("Error:", text);
         var completed = await WaitForStderrLineAsync("Consultation completed", TimeSpan.FromSeconds(10));
         Assert.NotNull(completed);
-        Assert.DoesNotMatch(@"reasoning=\d", completed);
+
+        // A zero reasoning-token count is an accepted report for a non-reasoning model:
+        // OpenRouter can report the field as present but 0. Only a positive count would
+        // contradict the claim that this model performed no reasoning.
+        Assert.DoesNotMatch(@"reasoning=[1-9]", completed);
     }
 
     [Fact]
