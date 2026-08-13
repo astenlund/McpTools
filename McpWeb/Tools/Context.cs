@@ -30,8 +30,11 @@ internal class Context
             var firstDayOfWeek = culture.DateTimeFormat.FirstDayOfWeek;
             var weekNumber = calendar.GetWeekOfYear(now, weekRule, firstDayOfWeek);
 
-            // Format the response as a concise, natural sentence
-            var utcOffset = timezone.BaseUtcOffset >= TimeSpan.Zero ? $"+{timezone.BaseUtcOffset.Hours}" : timezone.BaseUtcOffset.Hours.ToString();
+            // Format the response as a concise, natural sentence, using the DST-adjusted offset for the current moment
+            var offset = timezone.GetUtcOffset(now);
+            var absOffset = offset.Duration();
+            var sign = offset < TimeSpan.Zero ? "-" : "+";
+            var utcOffset = absOffset.Minutes == 0 ? $"{sign}{absOffset.Hours}" : $"{sign}{absOffset.Hours}:{absOffset.Minutes:D2}";
             var result = $"Current date and time: {now.ToString("dddd, MMMM d, yyyy 'at' HH:mm:ss", culture)}. Timezone: {timezone.Id} (UTC{utcOffset}). This is week {weekNumber} of {now.Year}.";
 
             _logger.LogInformation("Context retrieved successfully");
