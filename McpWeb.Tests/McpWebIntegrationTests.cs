@@ -505,7 +505,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         Assert.Contains("Current date and time:", response);
         Assert.Contains("Timezone:", response);
         Assert.Contains("week", response);  // lowercase in "This is week X of YYYY"
-        Assert.Contains("of 2025", response);  // Current year
+        Assert.Contains($"of {DateTime.Now.Year}", response);  // Current year
 
         // Should not have any errors
         Assert.DoesNotContain("Error retrieving context", response);
