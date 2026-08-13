@@ -1,4 +1,7 @@
+using McpCommon.Services;
 using McpConsultant.Models;
+using McpConsultant.Services;
+using McpConsultant.Tools;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -25,8 +28,15 @@ builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);
 builder.Services.Configure<ConsultantSettings>(
     builder.Configuration.GetSection("Consultant"));
 
+// HttpClient.Timeout stays infinite: the per-request linked CancellationTokenSource
+// in OpenRouterClient owns the timeout (and the timeout-vs-cancellation discriminator).
+builder.Services.AddHttpClient<OpenRouterClient>(client => client.Timeout = Timeout.InfiniteTimeSpan);
+
+builder.Services.AddSingleton<VpnDetectionService>();
+
 builder.Services
     .AddMcpServer()
-    .WithStdioServerTransport();
+    .WithStdioServerTransport()
+    .WithTools<Consultant>();
 
 await builder.Build().RunAsync();
