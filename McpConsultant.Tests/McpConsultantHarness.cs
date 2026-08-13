@@ -138,7 +138,7 @@ public abstract class McpConsultantHarness(ITestOutputHelper output) : IDisposab
         }
     }
 
-    private void StartMcpServer(string apiKey)
+    protected void StartMcpServer(string apiKey)
     {
         var projectPath = Path.Combine(
             Directory.GetCurrentDirectory(),
@@ -194,7 +194,7 @@ public abstract class McpConsultantHarness(ITestOutputHelper output) : IDisposab
         output.WriteLine("MCP server started");
     }
 
-    private async Task InitializeMcpProtocolAsync()
+    protected async Task InitializeMcpProtocolAsync()
     {
         // Step 1: Send initialize request
         var initializeRequest = new
@@ -253,7 +253,7 @@ public abstract class McpConsultantHarness(ITestOutputHelper output) : IDisposab
         output.WriteLine($"Tools list response: {ToolsListResponse}");
     }
 
-    private async Task SendToServerAsync(string message)
+    protected async Task SendToServerAsync(string message)
     {
         if (_serverProcess?.StandardInput == null)
         {
@@ -264,7 +264,7 @@ public abstract class McpConsultantHarness(ITestOutputHelper output) : IDisposab
         await _serverProcess.StandardInput.FlushAsync(TestContext.Current.CancellationToken);
     }
 
-    private async Task<string?> ReadFromServerAsync()
+    protected async Task<string?> ReadFromServerAsync()
     {
         if (_serverProcess?.StandardOutput == null)
         {
