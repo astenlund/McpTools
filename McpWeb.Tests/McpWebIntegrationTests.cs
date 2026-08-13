@@ -5,12 +5,13 @@ namespace McpWeb.Tests;
 
 /// <summary>
 /// Integration tests that start the actual MCP server and communicate with it.
-/// Tests both search_web and fetch_url tools.
+/// Tests the search_web, fetch_url, and get_context tools.
 /// </summary>
 public sealed class McpWebIntegrationTests : IDisposable
 {
     private readonly ITestOutputHelper _output;
     private Process? _serverProcess;
+    private int _nextRequestId = 3;
 
     public McpWebIntegrationTests(ITestOutputHelper output)
     {
@@ -21,49 +22,15 @@ public sealed class McpWebIntegrationTests : IDisposable
     public async Task SearchWeb_WithVpnConnected_ReturnsResults()
     {
         // Arrange
-        StartMcpServer();
+        await StartAndInitializeServerAsync();
 
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
+        // Act
+        var response = await CallToolAsync("search_web", new { query = "C# async programming", maxResults = 3, fetchContent = false });
 
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 3,
-            method = "tools/call",
-            @params = new
-            {
-                name = "search_web",  // MCP converts C# method names to snake_case
-                arguments = new
-                {
-                    query = "C# async programming",
-                    maxResults = 3,
-                    fetchContent = false  // Skip content to make test faster
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
+        // Assert
         Assert.NotNull(response);
-        // MCP wraps tool responses in result.content[].text format
-
-        // Search should succeed with human-readable text
         Assert.Contains("Search completed successfully", response);
         Assert.Contains("results for", response);
-
-        // Should not have any errors
         Assert.DoesNotContain("Search unavailable", response);
         Assert.DoesNotContain("Search failed", response);
     }
@@ -71,52 +38,17 @@ public sealed class McpWebIntegrationTests : IDisposable
     [Fact]
     public async Task SearchWeb_WithRequireVpnFalse_ReturnsResults()
     {
-        // Arrange - Start server with RequireVpn=false via environment variable
-        StartMcpServer(requireVpn: false);
+        // Arrange
+        await StartAndInitializeServerAsync(requireVpn: false);
 
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
+        // Act
+        var response = await CallToolAsync("search_web", new { query = "test query without VPN", maxResults = 3, fetchContent = false });
 
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 3,
-            method = "tools/call",
-            @params = new
-            {
-                name = "search_web",
-                arguments = new
-                {
-                    query = "test query without VPN",
-                    maxResults = 3,
-                    fetchContent = false
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
+        // Assert
         Assert.NotNull(response);
-
-        // Search should succeed even without VPN
         Assert.Contains("Search completed successfully", response);
         Assert.Contains("results for", response);
-
-        // Should NOT contain VPN error message
         Assert.DoesNotContain("connect to Mullvad VPN", response);
-
-        // Should not have any errors
         Assert.DoesNotContain("Search unavailable", response);
         Assert.DoesNotContain("Search failed", response);
     }
@@ -125,46 +57,153 @@ public sealed class McpWebIntegrationTests : IDisposable
     public async Task SearchWeb_WithVpnDisconnected_ReturnsError()
     {
         // Arrange
-        StartMcpServer();
+        await StartAndInitializeServerAsync();
 
-        // Wait for server to initialize
+        // Act
+        var response = await CallToolAsync("search_web", new { query = "test query", maxResults = 5, fetchContent = false });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("connect to Mullvad VPN", response);
+        Assert.Contains("Search unavailable", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithValidUrl_ReturnsContent()
+    {
+        // Arrange
+        await StartAndInitializeServerAsync();
+
+        // Act
+        var response = await CallToolAsync("fetch_url", new { url = "https://example.com" });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("Example Domain", response);
+        Assert.DoesNotContain("Error:", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithInvalidUrl_ReturnsError()
+    {
+        // Arrange
+        await StartAndInitializeServerAsync();
+
+        // Act
+        var response = await CallToolAsync("fetch_url", new { url = "not a valid url" });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("Error: Invalid URL format", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithLocalhostUrl_ReturnsError()
+    {
+        // Arrange
+        await StartAndInitializeServerAsync();
+
+        // Act - localhost URL exercises SSRF prevention
+        var response = await CallToolAsync("fetch_url", new { url = "http://localhost:8080/admin" });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
+    }
+
+    [Fact]
+    public async Task FetchUrl_WithPrivateIpUrl_ReturnsError()
+    {
+        // Arrange
+        await StartAndInitializeServerAsync();
+
+        // Act - private IP exercises SSRF prevention
+        var response = await CallToolAsync("fetch_url", new { url = "http://192.168.1.1/router" });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
+    }
+
+    [Fact]
+    public async Task GetContext_ReturnsCurrentDateTimeAndTimezone()
+    {
+        // Arrange
+        await StartAndInitializeServerAsync();
+
+        // Act
+        var response = await CallToolAsync("get_context", new { });
+
+        // Assert
+        Assert.NotNull(response);
+        Assert.Contains("Current date and time:", response);
+        Assert.Contains("Timezone:", response);
+        Assert.Contains("week", response);  // lowercase in "This is week X of YYYY"
+        Assert.Contains($"of {DateTime.Now.Year}", response);
+        Assert.DoesNotContain("Error retrieving context", response);
+    }
+
+    [Fact]
+    public async Task SearchWeb_FailedSearch_DoesNotTriggerDuplicateDetection()
+    {
+        // Arrange - failed searches must not count toward duplicate detection
+        await StartAndInitializeServerAsync(requireVpn: false);
+
+        // Act - send the same invalid search (empty query) twice in a row
+        var response1 = await CallToolAsync("search_web", new { query = "", maxResults = 5, fetchContent = false });
+        var response2 = await CallToolAsync("search_web", new { query = "", maxResults = 5, fetchContent = false });
+
+        // Assert - both fail validation; the second must not be blocked as a duplicate
+        Assert.NotNull(response1);
+        Assert.Contains("Error: Search query cannot be empty", response1);
+        Assert.NotNull(response2);
+        Assert.Contains("Error: Search query cannot be empty", response2);
+        Assert.DoesNotContain("DUPLICATE SEARCH DETECTED", response2);
+    }
+
+    public void Dispose()
+    {
+        if (_serverProcess is { HasExited: false })
+        {
+            _serverProcess.Kill(entireProcessTree: true);
+            _serverProcess.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Starts the MCP server process, waits for it to come up, and performs the MCP handshake.
+    /// </summary>
+    private async Task StartAndInitializeServerAsync(bool? requireVpn = null)
+    {
+        StartMcpServer(requireVpn);
+
+        // Wait for the server process to start before speaking the protocol
         await Task.Delay(2000, TestContext.Current.CancellationToken);
 
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
+        await InitializeMcpProtocolAsync();
+    }
 
-        // Act - Send MCP tool call request
+    /// <summary>
+    /// Sends a tools/call request and returns the raw JSON-RPC response line.
+    /// </summary>
+    private async Task<string?> CallToolAsync(string name, object arguments)
+    {
         var request = new
         {
             jsonrpc = "2.0",
-            id = 3,
+            id = _nextRequestId++,
             method = "tools/call",
-            @params = new
-            {
-                name = "search_web",  // MCP converts C# method names to snake_case
-                arguments = new
-                {
-                    query = "test query",
-                    maxResults = 5,
-                    fetchContent = false
-                }
-            }
+            @params = new { name, arguments }
         };
 
         var requestJson = JsonSerializer.Serialize(request);
         _output.WriteLine($"Request: {requestJson}");
+        await SendToServerAsync(requestJson);
 
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
+        var response = await ReadFromServerAsync();
         _output.WriteLine($"Response: {response}");
 
-        Assert.NotNull(response);
-        // MCP wraps tool responses in result.content[].text format
-        // Should contain VPN error message
-        Assert.Contains("connect to Mullvad VPN", response);
-        Assert.Contains("Search unavailable", response);
+        return response;
     }
 
     private void StartMcpServer(bool? requireVpn = null)
@@ -220,26 +259,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         _output.WriteLine("MCP server started");
     }
 
-    private async Task SendToServer(string message)
-    {
-        if (_serverProcess?.StandardInput == null)
-            throw new InvalidOperationException("Server not running");
-
-        await _serverProcess.StandardInput.WriteLineAsync(message);
-        await _serverProcess.StandardInput.FlushAsync();
-    }
-
-    private async Task<string?> ReadFromServer()
-    {
-        if (_serverProcess?.StandardOutput == null)
-            throw new InvalidOperationException("Server not running");
-
-        // MCP protocol sends one message per line
-        var response = await _serverProcess.StandardOutput.ReadLineAsync();
-        return response;
-    }
-
-    private async Task InitializeMcpProtocol()
+    private async Task InitializeMcpProtocolAsync()
     {
         // Step 1: Send initialize request
         var initializeRequest = new
@@ -249,7 +269,7 @@ public sealed class McpWebIntegrationTests : IDisposable
             method = "initialize",
             @params = new
             {
-                protocolVersion = "2024-11-05",
+                protocolVersion = "2025-06-18",
                 capabilities = new { },
                 clientInfo = new
                 {
@@ -261,25 +281,25 @@ public sealed class McpWebIntegrationTests : IDisposable
 
         var initializeJson = JsonSerializer.Serialize(initializeRequest);
         _output.WriteLine($"Sending initialize: {initializeJson}");
-        await SendToServer(initializeJson);
+        await SendToServerAsync(initializeJson);
 
         // Step 2: Read server response
-        var initializeResponse = await ReadFromServer();
+        var initializeResponse = await ReadFromServerAsync();
         _output.WriteLine($"Initialize response: {initializeResponse}");
 
         // Step 3: Send initialized notification (no id, it's a notification)
         var initializedNotification = new
         {
             jsonrpc = "2.0",
-            method = "initialized"
+            method = "notifications/initialized"
         };
 
         var initializedJson = JsonSerializer.Serialize(initializedNotification);
         _output.WriteLine($"Sending initialized: {initializedJson}");
-        await SendToServer(initializedJson);
+        await SendToServerAsync(initializedJson);
 
         // Give server a moment to process the notification
-        await Task.Delay(100);
+        await Task.Delay(100, TestContext.Current.CancellationToken);
 
         // Step 4: List available tools to discover them
         var toolsListRequest = new
@@ -291,305 +311,32 @@ public sealed class McpWebIntegrationTests : IDisposable
 
         var toolsListJson = JsonSerializer.Serialize(toolsListRequest);
         _output.WriteLine($"Sending tools/list: {toolsListJson}");
-        await SendToServer(toolsListJson);
+        await SendToServerAsync(toolsListJson);
 
         // Read tools list response
-        var toolsListResponse = await ReadFromServer();
+        var toolsListResponse = await ReadFromServerAsync();
         _output.WriteLine($"Tools list response: {toolsListResponse}");
     }
 
-    [Fact]
-    public async Task FetchUrl_WithValidUrl_ReturnsContent()
+    private async Task SendToServerAsync(string message)
     {
-        // Arrange
-        StartMcpServer();
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request to fetch example.com
-        var request = new
+        if (_serverProcess?.StandardInput == null)
         {
-            jsonrpc = "2.0",
-            id = 4,
-            method = "tools/call",
-            @params = new
-            {
-                name = "fetch_url",  // MCP converts C# method names to snake_case
-                arguments = new
-                {
-                    url = "https://example.com"
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
-        Assert.NotNull(response);
-
-        // Should contain HTML content from example.com
-        Assert.Contains("Example Domain", response);
-        Assert.DoesNotContain("Error:", response);
-    }
-
-    [Fact]
-    public async Task FetchUrl_WithInvalidUrl_ReturnsError()
-    {
-        // Arrange
-        StartMcpServer();
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request with invalid URL
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 4,
-            method = "tools/call",
-            @params = new
-            {
-                name = "fetch_url",
-                arguments = new
-                {
-                    url = "not a valid url"
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
-        Assert.NotNull(response);
-        Assert.Contains("Error: Invalid URL format", response);
-    }
-
-    [Fact]
-    public async Task FetchUrl_WithLocalhostUrl_ReturnsError()
-    {
-        // Arrange
-        StartMcpServer();
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request with localhost URL (SSRF prevention test)
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 4,
-            method = "tools/call",
-            @params = new
-            {
-                name = "fetch_url",
-                arguments = new
-                {
-                    url = "http://localhost:8080/admin"
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
-        Assert.NotNull(response);
-        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
-    }
-
-    [Fact]
-    public async Task FetchUrl_WithPrivateIpUrl_ReturnsError()
-    {
-        // Arrange
-        StartMcpServer();
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request with private IP (SSRF prevention test)
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 4,
-            method = "tools/call",
-            @params = new
-            {
-                name = "fetch_url",
-                arguments = new
-                {
-                    url = "http://192.168.1.1/router"
-                }
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
-        Assert.NotNull(response);
-        Assert.Contains("Error: Access to local or private network addresses is not allowed", response);
-    }
-
-    [Fact]
-    public async Task GetContext_ReturnsCurrentDateTimeAndTimezone()
-    {
-        // Arrange
-        StartMcpServer();
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act - Send MCP tool call request for get_context
-        var request = new
-        {
-            jsonrpc = "2.0",
-            id = 5,
-            method = "tools/call",
-            @params = new
-            {
-                name = "get_context",  // MCP converts C# method names to snake_case
-                arguments = new { }  // No arguments needed
-            }
-        };
-
-        var requestJson = JsonSerializer.Serialize(request);
-        _output.WriteLine($"Request: {requestJson}");
-
-        await SendToServer(requestJson);
-
-        // Assert - Read response
-        var response = await ReadFromServer();
-        _output.WriteLine($"Response: {response}");
-
-        Assert.NotNull(response);
-
-        // Should contain context information in concise format
-        Assert.Contains("Current date and time:", response);
-        Assert.Contains("Timezone:", response);
-        Assert.Contains("week", response);  // lowercase in "This is week X of YYYY"
-        Assert.Contains($"of {DateTime.Now.Year}", response);  // Current year
-
-        // Should not have any errors
-        Assert.DoesNotContain("Error retrieving context", response);
-    }
-
-    [Fact]
-    public async Task SearchWeb_FailedSearch_DoesNotTriggerDuplicateDetection()
-    {
-        // Arrange - This test verifies that failed searches don't count toward rate limiting
-        StartMcpServer(requireVpn: false);
-
-        // Wait for server to initialize
-        await Task.Delay(2000, TestContext.Current.CancellationToken);
-
-        // Initialize MCP protocol
-        await InitializeMcpProtocol();
-
-        // Act 1 - Send invalid search (empty query) - should fail
-        var request1 = new
-        {
-            jsonrpc = "2.0",
-            id = 10,
-            method = "tools/call",
-            @params = new
-            {
-                name = "search_web",
-                arguments = new
-                {
-                    query = "",  // Empty query - will fail validation
-                    maxResults = 5,
-                    fetchContent = false
-                }
-            }
-        };
-
-        var requestJson1 = JsonSerializer.Serialize(request1);
-        _output.WriteLine($"First request (should fail): {requestJson1}");
-
-        await SendToServer(requestJson1);
-
-        var response1 = await ReadFromServer();
-        _output.WriteLine($"First response: {response1}");
-
-        Assert.NotNull(response1);
-        Assert.Contains("Error: Search query cannot be empty", response1);
-
-        // Act 2 - Send the same invalid search again immediately
-        var request2 = new
-        {
-            jsonrpc = "2.0",
-            id = 11,
-            method = "tools/call",
-            @params = new
-            {
-                name = "search_web",
-                arguments = new
-                {
-                    query = "",  // Same empty query
-                    maxResults = 5,
-                    fetchContent = false
-                }
-            }
-        };
-
-        var requestJson2 = JsonSerializer.Serialize(request2);
-        _output.WriteLine($"Second request (should also fail, NOT be blocked by duplicate detection): {requestJson2}");
-
-        await SendToServer(requestJson2);
-
-        var response2 = await ReadFromServer();
-        _output.WriteLine($"Second response: {response2}");
-
-        // Assert - Second request should get the same error, NOT "DUPLICATE SEARCH DETECTED"
-        Assert.NotNull(response2);
-        Assert.Contains("Error: Search query cannot be empty", response2);
-        Assert.DoesNotContain("DUPLICATE SEARCH DETECTED", response2);
-    }
-
-    public void Dispose()
-    {
-        if (_serverProcess is { HasExited: false })
-        {
-            _serverProcess.Kill(entireProcessTree: true);
-            _serverProcess.Dispose();
+            throw new InvalidOperationException("Server not running");
         }
+
+        await _serverProcess.StandardInput.WriteLineAsync(message);
+        await _serverProcess.StandardInput.FlushAsync(TestContext.Current.CancellationToken);
+    }
+
+    private async Task<string?> ReadFromServerAsync()
+    {
+        if (_serverProcess?.StandardOutput == null)
+        {
+            throw new InvalidOperationException("Server not running");
+        }
+
+        // MCP protocol sends one message per line
+        return await _serverProcess.StandardOutput.ReadLineAsync(TestContext.Current.CancellationToken);
     }
 }
