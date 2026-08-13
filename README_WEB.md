@@ -135,7 +135,7 @@ Restart your MCP client (LM Studio, VS Code, etc.)
 McpTools/
 ├── McpWeb/                 # Main C# project
 │   ├── Models/            # Data models and settings
-│   ├── Services/          # Search, VPN detection, content fetching
+│   ├── Services/          # Search, content fetching (VPN detection now in McpCommon)
 │   ├── Tools/             # MCP tool definitions (Search, Fetch, Context)
 │   └── Program.cs         # Entry point and DI configuration
 ├── McpWeb.Tests/          # Integration tests
