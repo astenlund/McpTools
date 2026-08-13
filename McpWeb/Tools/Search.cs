@@ -1,5 +1,6 @@
 using System.ComponentModel;
-using McpWeb.Exceptions;
+using McpCommon.Exceptions;
+using McpCommon.Services;
 using McpWeb.Models;
 using McpWeb.Services;
 using Microsoft.Extensions.Options;

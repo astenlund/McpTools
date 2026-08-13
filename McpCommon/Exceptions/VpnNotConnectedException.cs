@@ -1,4 +1,4 @@
-namespace McpWeb.Exceptions;
+namespace McpCommon.Exceptions;
 
 /// <summary>
 /// Exception thrown when Mullvad VPN is required but not connected.
