@@ -115,7 +115,7 @@ Or use the published executable for better performance:
 {
   "mcpServers": {
     "web": {
-      "command": "/path/to/McpWeb/bin/Release/net9.0/win-x64/publish/McpWeb.exe",
+      "command": "/path/to/McpWeb/bin/Release/net10.0/win-x64/publish/McpWeb.exe",
       "args": [],
       "env": {
         "Search__SerperApiKey": "your-api-key-here"
@@ -145,7 +145,7 @@ McpTools/
 
 ## Requirements
 
-- .NET 9.0 SDK or later
+- .NET 10 SDK or later
 - LM Studio, VS Code with Copilot, or Visual Studio with Copilot
 - Internet connection
 
@@ -178,7 +178,7 @@ Rate limiting, retry logic, and security validation ensure reliable, safe operat
 
 ## Technology Stack
 
-- **C# / .NET 9.0** - Modern, cross-platform framework
+- **C# / .NET 10** - Modern, cross-platform framework
 - **Model Context Protocol** - Open standard for LLM integrations
 - **Serper.dev API** - Web search provider
 - **Polly** - Resilience and retry policies
