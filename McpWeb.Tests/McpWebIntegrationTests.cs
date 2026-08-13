@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Text.Json;
-using Xunit.Abstractions;
 
 namespace McpWeb.Tests;
 
@@ -25,7 +24,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -76,7 +75,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer(requireVpn: false);
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -129,7 +128,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -306,7 +305,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -350,7 +349,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -391,7 +390,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -432,7 +431,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -473,7 +472,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer();
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
@@ -519,7 +518,7 @@ public sealed class McpWebIntegrationTests : IDisposable
         StartMcpServer(requireVpn: false);
 
         // Wait for server to initialize
-        await Task.Delay(2000);
+        await Task.Delay(2000, TestContext.Current.CancellationToken);
 
         // Initialize MCP protocol
         await InitializeMcpProtocol();
