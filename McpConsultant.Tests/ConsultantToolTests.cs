@@ -64,6 +64,20 @@ public class ConsultantToolTests
         Assert.Null(handler.LastRequest);
     }
 
+    [Fact]
+    public async Task InvalidDefaultEffort_ReturnsAllowedValuesError()
+    {
+        // Arrange
+        var (tool, handler) = Build(s => s.DefaultEffort = "medium");
+
+        // Act
+        var result = await tool.Consult("Q", null, null, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Contains("effort must be one of: low, high, max", result);
+        Assert.Null(handler.LastRequest);
+    }
+
     [Theory]
     [InlineData("LOW", "low")]
     [InlineData("High", "high")]

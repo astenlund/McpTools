@@ -32,6 +32,22 @@ public class PromptAssemblerTests
     }
 
     [Fact]
+    public void ContextAndFilePresent_ContextPrecedesFilePrecedesQuestion()
+    {
+        // Arrange
+        var files = new List<AttachedFile> { new(@"C:\a\one.txt", "alpha") };
+
+        // Act
+        var message = PromptAssembler.BuildUserMessage("Q", "some background", files);
+
+        // Assert
+        var beginContext = message.IndexOf("===== BEGIN CONTEXT =====", StringComparison.Ordinal);
+        var beginFile = message.IndexOf(@"===== BEGIN FILE: C:\a\one.txt =====", StringComparison.Ordinal);
+        var question = message.IndexOf("===== QUESTION =====", StringComparison.Ordinal);
+        Assert.True(beginContext >= 0 && beginFile > beginContext && question > beginFile);
+    }
+
+    [Fact]
     public void WhitespaceContext_TreatedAsAbsent()
     {
         // Arrange / Act
