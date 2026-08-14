@@ -49,6 +49,27 @@ public class OpenRouterClientTests
     }
 
     [Fact]
+    public async Task NonIntegralUsageNumbers_LeaveUsageNullWithoutFailing()
+    {
+        // Arrange - usage numbers that are Number-kind but not Int32-representable
+        // (GetInt32 would throw; the guarded parse must keep the answer and drop usage)
+        const string body = """
+            {
+              "choices": [{"message": {"content": "The answer."}, "finish_reason": "stop"}],
+              "usage": {"prompt_tokens": 3.5, "completion_tokens": 9999999999}
+            }
+            """;
+        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, body);
+
+        // Act
+        var result = await Client(handler).ConsultAsync(Call(), CancellationToken.None);
+
+        // Assert
+        Assert.Equal("The answer.", result.Answer);
+        Assert.Null(result.Usage);
+    }
+
+    [Fact]
     public async Task Request_CarriesAuthEffortAndTitleHeader()
     {
         // Arrange
