@@ -13,6 +13,11 @@ namespace McpWeb.Tools;
 /// </summary>
 internal class Search
 {
+    private const string VpnFailureMessage =
+        "SEARCH UNAVAILABLE: The user must connect to Mullvad VPN before web searches can be performed. " +
+        "This is a privacy requirement that only the user can fulfill. " +
+        "Please inform the user that they need to connect their VPN, and wait for them to do so before retrying the search.";
+
     private readonly SearchService _searchService;
     private readonly VpnDetectionService _vpnDetectionService;
     private readonly SearchSettings _searchSettings;
@@ -81,7 +86,7 @@ internal class Search
             // Check VPN if required
             if (_searchSettings.RequireVpn)
             {
-                _vpnDetectionService.EnsureVpnConnected();
+                _vpnDetectionService.EnsureVpnConnected(VpnFailureMessage);
             }
 
             var results = await _searchService.SearchAsync(query, maxResults, fetchContent);

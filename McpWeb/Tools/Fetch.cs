@@ -15,6 +15,11 @@ namespace McpWeb.Tools;
 /// </summary>
 internal class Fetch
 {
+    private const string VpnFailureMessage =
+        "FETCH UNAVAILABLE: The user must connect to Mullvad VPN before URLs can be fetched. " +
+        "This is a privacy requirement that only the user can fulfill. " +
+        "Please inform the user that they need to connect their VPN, and wait for them to do so before retrying the fetch.";
+
     private readonly ContentFetcher _contentFetcher;
     private readonly VpnDetectionService _vpnDetectionService;
     private readonly FetchSettings _fetchSettings;
@@ -71,7 +76,7 @@ internal class Fetch
             // Check VPN if required
             if (_fetchSettings.RequireVpn)
             {
-                _vpnDetectionService.EnsureVpnConnected();
+                _vpnDetectionService.EnsureVpnConnected(VpnFailureMessage);
             }
 
             _logger.LogInformation("Fetching content from URL: {Url}", url);

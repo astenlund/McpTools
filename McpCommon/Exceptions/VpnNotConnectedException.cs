@@ -6,9 +6,9 @@ namespace McpCommon.Exceptions;
 public class VpnNotConnectedException : Exception
 {
     public VpnNotConnectedException()
-        : base("SEARCH UNAVAILABLE: The user must connect to Mullvad VPN before web searches can be performed. " +
+        : base("VPN UNAVAILABLE: The user must connect to Mullvad VPN before this operation can be performed. " +
                "This is a privacy requirement that only the user can fulfill. " +
-               "Please inform the user that they need to connect their VPN, and wait for them to do so before retrying the search.")
+               "Please inform the user that they need to connect their VPN, and wait for them to do so before retrying.")
     {
     }
 
