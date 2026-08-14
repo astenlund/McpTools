@@ -7,5 +7,5 @@ namespace McpConsultant.Models;
 /// </summary>
 internal static class EffortLevels
 {
-    internal static readonly string[] Allowed = ["low", "high", "max"];
+    internal static readonly IReadOnlyList<string> Allowed = ["low", "high", "max"];
 }
