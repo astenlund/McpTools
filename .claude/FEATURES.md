@@ -191,7 +191,16 @@ gates, move it out of `## Exploring` into the appropriate themed `##`
 section, add the `**Requires:**` line, and drop the `status: exploring`
 frontmatter on the breakout file.
 
-Nothing being explored yet.
+### [McpConsultant follow-ups](features/mcp-consultant-followups.md)
+
+Findings from an external model review of the graduated McpConsultant
+design spec, gated on the first slice (now shipped) and not yet vetted:
+structural challenges (agent-aware attachment trust model, streamed
+budget enforcement, OpenRouter data governance, MCP-native error
+semantics), additive hardening, and rebalancing suggestions. Each
+finding needs vetting before any graduates to a themed section; entries
+that change spec decisions go through a spec revision and
+re-graduation of [mcp-consultant.md](features/mcp-consultant.md).
 
 ## (add sections as features emerge)
 

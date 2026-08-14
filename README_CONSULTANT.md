@@ -94,5 +94,5 @@ A running server keeps serving the old binary until that restart.
 ## Documentation
 
 - **Full Docs:** [CLAUDE.md](CLAUDE.md) - Complete architecture and development guide
-- **Design Spec:** Machine-local and untracked (not part of this repository's history), at `.claude/specs/2026-08-13-mcp-consultant-design.md` on the machine where it was authored
+- **Design Spec:** [.claude/features/mcp-consultant.md](.claude/features/mcp-consultant.md) - Review-graduated design record
 - **MCP Spec:** [modelcontextprotocol.io](https://modelcontextprotocol.io/)

@@ -28,7 +28,7 @@ MCP server for RP-focused image generation with session-consistent character por
 **Key Concept**: Optimized for visual storytelling across RP conversations, not one-off image generation. Session-locked styles ensure all images feel like they're from the same illustrated story.
 
 ### McpConsultant (Active)
-MCP server giving Claude Code a single `consult` tool for second opinions from external models via OpenRouter. Every consultation is a stateless one-shot request; file attachments are read from disk and sent directly to OpenRouter, so their contents never enter the client's conversation context. Design spec (review-graduated, untracked): `.claude/specs/2026-08-13-mcp-consultant-design.md`.
+MCP server giving Claude Code a single `consult` tool for second opinions from external models via OpenRouter. Every consultation is a stateless one-shot request; file attachments are read from disk and sent directly to OpenRouter, so their contents never enter the client's conversation context. Design spec (review-graduated): `.claude/features/mcp-consultant.md`.
 
 **Technology Stack**: .NET 10, ModelContextProtocol SDK, OpenRouter API, runs as stdio MCP server
 
@@ -37,7 +37,7 @@ MCP server giving Claude Code a single `consult` tool for second opinions from e
 
 **Status**: Implemented, tested
 
-**Follow-ups**: `.claude/specs/2026-08-13-mcp-consultant-followups.md` tracks findings from an external model review of the spec, explicitly gated on the first slice shipping; consult it before planning any second slice.
+**Follow-ups**: `.claude/features/mcp-consultant-followups.md` (an exploring draft indexed in `.claude/FEATURES.md`'s `## Exploring` section, findings not yet vetted) tracks findings from an external model review of the spec, explicitly gated on the first slice shipping; consult it before planning any second slice.
 
 ## Common Development Commands
 

@@ -25,4 +25,4 @@ what already shipped, not to resolve dependencies.
 
 ## Entries
 
-Nothing yet.
+- [McpConsultant](features/mcp-consultant.md): first slice shipped 2026-08-13. Stdio MCP server exposing a single `consult` tool for second opinions from external models via OpenRouter; includes the McpCommon extraction (`VpnDetectionService`, `VpnNotConnectedException`) shared with McpWeb. The breakout file is the review-graduated design spec. Unvetted follow-up findings are tracked as an exploring draft in `FEATURES.md`.
