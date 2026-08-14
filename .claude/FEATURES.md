@@ -202,6 +202,17 @@ finding needs vetting before any graduates to a themed section; entries
 that change spec decisions go through a spec revision and
 re-graduation of [mcp-consultant.md](features/mcp-consultant.md).
 
+### [Second-opinion gate integration](features/second-opinion-gate-integration.md)
+
+Draft exploring what the Nightshift plugin's second-opinion-gates
+feature needs from `consult`, from the 2026-08-15 fit assessment:
+follow-up probing over a stateless one-shot (transcript replay or
+server-side continuation), a frozen minimal tool contract that clients
+can feature-detect without version coupling, and an optional
+schema-validated structured-output mode. Each direction needs vetting;
+the contract question also decides how much of the integration lands
+here versus in the Nightshift plugin.
+
 ## (add sections as features emerge)
 
 Nothing captured yet.
