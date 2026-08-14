@@ -251,6 +251,25 @@ public class ConsultantToolTests
     }
 
     [Fact]
+    public async Task ClientCancellation_RethrowsInsteadOfReturningError()
+    {
+        // Arrange - delayed handler; the client's own token fires mid-flight
+        using var clientCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var handler = new StubHttpMessageHandler(async (_, ct) =>
+        {
+            await Task.Delay(TimeSpan.FromSeconds(30), ct);
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+        var (tool, _) = Build(handler: handler);
+
+        // Act / Assert - the one sanctioned escape: a rethrown OperationCanceledException,
+        // never a structured error string
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => tool.Consult("Q", null, null, null, null, clientCts.Token));
+    }
+
+    [Fact]
     public async Task NetworkFailure_ReturnsNetworkFailureClass()
     {
         // Arrange
