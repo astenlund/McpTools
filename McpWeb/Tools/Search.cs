@@ -56,26 +56,13 @@ internal class Search
             return "Error: Search query cannot be empty.";
         }
 
-        // Check for duplicate search within time window
         var normalizedQuery = query.Trim().ToLowerInvariant();
         var now = DateTime.UtcNow;
 
-        if (_recentSearches.TryGetValue(normalizedQuery, out var lastSearchTime))
+        var duplicateWarning = CheckDuplicateSearch(query, normalizedQuery, now);
+        if (duplicateWarning is not null)
         {
-            var timeSinceLastSearch = now - lastSearchTime;
-            if (timeSinceLastSearch < _duplicateWindow)
-            {
-                return $"DUPLICATE SEARCH DETECTED: This exact query \"{query}\" was already searched {timeSinceLastSearch.TotalSeconds:F0} seconds ago. " +
-                       $"The results are already available above. DO NOT search again. Use the previous search results to answer the user's question.";
-            }
-        }
-
-        // Cleanup old entries (older than 5 minutes)
-        var cutoffTime = now.Subtract(TimeSpan.FromMinutes(5));
-        var oldEntries = _recentSearches.Where(kvp => kvp.Value < cutoffTime).Select(kvp => kvp.Key).ToList();
-        foreach (var oldEntry in oldEntries)
-        {
-            _recentSearches.TryRemove(oldEntry, out _);
+            return duplicateWarning;
         }
 
         // Limit maxResults to reasonable range
@@ -94,34 +81,7 @@ internal class Search
             // Update last search time ONLY after successful search
             _recentSearches[normalizedQuery] = now;
 
-            // Format as human-readable text for better LLM comprehension
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine($"Search completed successfully. Found {results.Count} results for \"{query}\":");
-            sb.AppendLine();
-
-            for (int i = 0; i < results.Count; i++)
-            {
-                var result = results[i];
-                sb.AppendLine($"{i + 1}. {result.Title}");
-                sb.AppendLine($"   URL: {result.Url}");
-                sb.AppendLine($"   {result.Snippet}");
-
-                if (fetchContent && !string.IsNullOrEmpty(result.FullContent))
-                {
-                    // Truncate full content to avoid overwhelming the LLM
-                    var content = result.FullContent.Length > 1000
-                        ? result.FullContent.Substring(0, 1000) + "..."
-                        : result.FullContent;
-                    sb.AppendLine($"   Content preview: {content}");
-                }
-
-                sb.AppendLine();
-            }
-
-            sb.AppendLine("---");
-            sb.AppendLine($"Search complete. Use the information above to answer the user's question. Do not search again unless the user asks a new question.");
-
-            return sb.ToString();
+            return FormatResults(results, query, fetchContent);
         }
         catch (VpnNotConnectedException ex)
         {
@@ -131,5 +91,64 @@ internal class Search
         {
             return $"Search failed for \"{query}\": {ex.Message}";
         }
+    }
+
+    /// <summary>
+    /// Returns a duplicate-search warning when the query was searched within the duplicate
+    /// window; otherwise prunes stale entries from the recent-search cache and returns null.
+    /// </summary>
+    private static string? CheckDuplicateSearch(string query, string normalizedQuery, DateTime now)
+    {
+        if (_recentSearches.TryGetValue(normalizedQuery, out var lastSearchTime))
+        {
+            var timeSinceLastSearch = now - lastSearchTime;
+            if (timeSinceLastSearch < _duplicateWindow)
+            {
+                return $"DUPLICATE SEARCH DETECTED: This exact query \"{query}\" was already searched {timeSinceLastSearch.TotalSeconds:F0} seconds ago. " +
+                       $"The results are already available above. DO NOT search again. Use the previous search results to answer the user's question.";
+            }
+        }
+
+        // Cleanup old entries (older than 5 minutes)
+        var cutoffTime = now.Subtract(TimeSpan.FromMinutes(5));
+        var oldEntries = _recentSearches.Where(kvp => kvp.Value < cutoffTime).Select(kvp => kvp.Key).ToList();
+        foreach (var oldEntry in oldEntries)
+        {
+            _recentSearches.TryRemove(oldEntry, out _);
+        }
+
+        return null;
+    }
+
+    /// <summary>Formats search results as human-readable text for better LLM comprehension.</summary>
+    private static string FormatResults(IReadOnlyList<SearchResult> results, string query, bool fetchContent)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine($"Search completed successfully. Found {results.Count} results for \"{query}\":");
+        sb.AppendLine();
+
+        for (int i = 0; i < results.Count; i++)
+        {
+            var result = results[i];
+            sb.AppendLine($"{i + 1}. {result.Title}");
+            sb.AppendLine($"   URL: {result.Url}");
+            sb.AppendLine($"   {result.Snippet}");
+
+            if (fetchContent && !string.IsNullOrEmpty(result.FullContent))
+            {
+                // Truncate full content to avoid overwhelming the LLM
+                var content = result.FullContent.Length > 1000
+                    ? result.FullContent.Substring(0, 1000) + "..."
+                    : result.FullContent;
+                sb.AppendLine($"   Content preview: {content}");
+            }
+
+            sb.AppendLine();
+        }
+
+        sb.AppendLine("---");
+        sb.AppendLine($"Search complete. Use the information above to answer the user's question. Do not search again unless the user asks a new question.");
+
+        return sb.ToString();
     }
 }
