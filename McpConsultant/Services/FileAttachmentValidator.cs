@@ -117,6 +117,13 @@ internal static class FileAttachmentValidator
                 continue;
             }
 
+            // Strip a leading UTF-8 BOM: it is valid UTF-8, so the strict decoder would
+            // otherwise pass a stray U+FEFF straight into the assembled prompt.
+            if (bytes is [0xEF, 0xBB, 0xBF, ..])
+            {
+                bytes = bytes[3..];
+            }
+
             try
             {
                 attached.Add(new AttachedFile(path, strictUtf8.GetString(bytes)));

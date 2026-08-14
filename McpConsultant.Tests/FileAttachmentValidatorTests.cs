@@ -174,6 +174,29 @@ public class FileAttachmentValidatorTests
     }
 
     [Fact]
+    public void Utf8Bom_IsStrippedFromContent()
+    {
+        // Arrange - BOM-prefixed file, as saved by common Windows tooling
+        var dir = Directory.CreateTempSubdirectory().FullName;
+        try
+        {
+            var path = Path.Combine(dir, "bom.txt");
+            File.WriteAllBytes(path, [0xEF, 0xBB, 0xBF, 0x61, 0x62, 0x63]);
+
+            // Act
+            var result = FileAttachmentValidator.Validate([path], 100);
+
+            // Assert
+            Assert.Null(result.Error);
+            Assert.Equal("abc", Assert.Single(result.Files).Content);
+        }
+        finally
+        {
+            Directory.Delete(dir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void InvalidUtf8WithoutNul_ReportedAsWrongEncoding()
     {
         // Arrange - 0xE4 alone is not valid UTF-8 and contains no NUL
