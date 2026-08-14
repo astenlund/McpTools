@@ -59,7 +59,7 @@ internal class Consultant(
             }
 
             // Step 3: model resolution
-            var resolvedModel = string.IsNullOrWhiteSpace(model) ? settings.DefaultModel : model.Trim();
+            var resolvedModel = (string.IsNullOrWhiteSpace(model) ? settings.DefaultModel : model).Trim();
             if (string.IsNullOrWhiteSpace(resolvedModel))
             {
                 return ErrorMessages.MissingDefaultModel();
