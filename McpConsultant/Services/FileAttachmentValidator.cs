@@ -25,16 +25,19 @@ internal static class FileAttachmentValidator
         var (passing, stage1Errors) = ValidateMetadata(files, maxAttachmentBytes);
         if (stage1Errors.Count > 0)
         {
-            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage1Errors)}.");
+            return Fail(stage1Errors);
         }
 
         var (attached, stage2Errors) = ReadContents(passing);
         if (stage2Errors.Count > 0)
         {
-            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage2Errors)}.");
+            return Fail(stage2Errors);
         }
 
         return new FileValidationResult(attached, null);
+
+        static FileValidationResult Fail(List<string> errors) =>
+            new([], $"Error: file validation failed: {string.Join("; ", errors)}.");
     }
 
     /// <summary>Stage 1: dedup, qualification, existence, and budget checks from metadata alone; no content is read.</summary>
