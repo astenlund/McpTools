@@ -82,31 +82,7 @@ public sealed class OpenRouterClient(HttpClient httpClient, ILogger<OpenRouterCl
                 ? fr.GetString()
                 : null;
 
-            // usage is observability-only: a malformed usage shape must never fail a call
-            // that carried a good answer, so every field access is guarded (TryGetInt32
-            // rejects non-integral and out-of-range numbers that GetInt32 would throw on)
-            // and a partial shape just leaves usage null.
-            OpenRouterUsage? usage = null;
-            if (json.RootElement.TryGetProperty("usage", out var u)
-                && u.ValueKind == JsonValueKind.Object
-                && u.TryGetProperty("prompt_tokens", out var pt)
-                && pt.ValueKind == JsonValueKind.Number
-                && pt.TryGetInt32(out var promptTokens)
-                && u.TryGetProperty("completion_tokens", out var cot)
-                && cot.ValueKind == JsonValueKind.Number
-                && cot.TryGetInt32(out var completionTokens))
-            {
-                int? reasoningTokens = u.TryGetProperty("completion_tokens_details", out var details)
-                    && details.ValueKind == JsonValueKind.Object
-                    && details.TryGetProperty("reasoning_tokens", out var rt)
-                    && rt.ValueKind == JsonValueKind.Number
-                    && rt.TryGetInt32(out var reasoning)
-                        ? reasoning
-                        : (int?)null;
-                usage = new OpenRouterUsage(promptTokens, completionTokens, reasoningTokens);
-            }
-
-            result = new OpenRouterResult(answer, finishReason, usage);
+            result = new OpenRouterResult(answer, finishReason, ParseUsage(json.RootElement));
         }
         catch (Exception ex) when (ex is not OpenRouterApiException)
         {
@@ -116,5 +92,34 @@ public sealed class OpenRouterClient(HttpClient httpClient, ILogger<OpenRouterCl
         }
 
         return result;
+    }
+
+    // usage is observability-only: a malformed usage shape must never fail a call
+    // that carried a good answer, so every field access is guarded (TryGetInt32
+    // rejects non-integral and out-of-range numbers that GetInt32 would throw on)
+    // and a partial shape just yields null.
+    private static OpenRouterUsage? ParseUsage(JsonElement root)
+    {
+        if (root.TryGetProperty("usage", out var u)
+            && u.ValueKind == JsonValueKind.Object
+            && u.TryGetProperty("prompt_tokens", out var pt)
+            && pt.ValueKind == JsonValueKind.Number
+            && pt.TryGetInt32(out var promptTokens)
+            && u.TryGetProperty("completion_tokens", out var cot)
+            && cot.ValueKind == JsonValueKind.Number
+            && cot.TryGetInt32(out var completionTokens))
+        {
+            int? reasoningTokens = u.TryGetProperty("completion_tokens_details", out var details)
+                && details.ValueKind == JsonValueKind.Object
+                && details.TryGetProperty("reasoning_tokens", out var rt)
+                && rt.ValueKind == JsonValueKind.Number
+                && rt.TryGetInt32(out var reasoning)
+                    ? reasoning
+                    : (int?)null;
+
+            return new OpenRouterUsage(promptTokens, completionTokens, reasoningTokens);
+        }
+
+        return null;
     }
 }
