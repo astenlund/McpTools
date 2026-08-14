@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.Net.NetworkInformation;
 using McpCommon.Exceptions;
 using Microsoft.Extensions.Logging;
@@ -155,35 +154,5 @@ public class VpnDetectionService
         return description.Contains("adguard") ||
                description.Contains("wfp") ||
                name.Contains("adguard");
-    }
-
-    /// <summary>
-    /// Checks if Mullvad daemon process is running.
-    /// </summary>
-    private bool IsMullvadProcessRunning()
-    {
-        try
-        {
-            Process[] processes = Process.GetProcessesByName("mullvad-daemon");
-            bool isRunning = processes.Length > 0;
-
-            if (isRunning)
-            {
-                _logger.LogDebug("Found {Count} mullvad-daemon process(es)", processes.Length);
-            }
-
-            // Clean up process handles
-            foreach (var process in processes)
-            {
-                process.Dispose();
-            }
-
-            return isRunning;
-        }
-        catch (Exception ex)
-        {
-            _logger.LogDebug(ex, "Could not check for Mullvad process");
-            return false;
-        }
     }
 }
