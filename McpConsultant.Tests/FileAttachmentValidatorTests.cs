@@ -51,25 +51,18 @@ public class FileAttachmentValidatorTests
     public void MissingAndDirectory_BothReportedInOneError()
     {
         // Arrange
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var missing = Path.Combine(dir, "nope.txt");
+        using var dir = new TempDir();
+        var missing = Path.Combine(dir.Root, "nope.txt");
 
-            // Act
-            var result = FileAttachmentValidator.Validate([missing, dir], 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([missing, dir.Root], 100);
 
-            // Assert
-            Assert.NotNull(result.Error);
-            Assert.Contains("does not exist", result.Error);
-            Assert.Contains("is a directory, not a file", result.Error);
-            Assert.Contains(missing, result.Error);
-            Assert.Contains(dir, result.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.NotNull(result.Error);
+        Assert.Contains("does not exist", result.Error);
+        Assert.Contains("is a directory, not a file", result.Error);
+        Assert.Contains(missing, result.Error);
+        Assert.Contains(dir.Root, result.Error);
     }
 
     [Fact]
@@ -77,174 +70,136 @@ public class FileAttachmentValidatorTests
     {
         // Arrange - hold an exclusive lock so any content read would fail as unreadable;
         // the budget error appearing instead proves no content read occurred.
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "big.txt");
-            File.WriteAllText(path, new string('x', 200));
-            using var exclusiveLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "big.txt");
+        File.WriteAllText(path, new string('x', 200));
+        using var exclusiveLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
 
-            // Act
-            var result = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 100);
 
-            // Assert
-            Assert.NotNull(result.Error);
-            Assert.Contains("exceed the attachment budget", result.Error);
-            Assert.DoesNotContain("could not be read", result.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.NotNull(result.Error);
+        Assert.Contains("exceed the attachment budget", result.Error);
+        Assert.DoesNotContain("could not be read", result.Error);
     }
 
     [Fact]
     public void DuplicatePath_ValidatedCountedAndAttachedOnce()
     {
         // Arrange
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "dup.txt");
-            File.WriteAllText(path, new string('y', 60));
-            var upper = path.ToUpperInvariant();
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "dup.txt");
+        File.WriteAllText(path, new string('y', 60));
+        var upper = path.ToUpperInvariant();
 
-            // Act - 60 bytes twice would exceed 100; deduplicated it fits, and exactly at the
-            // limit (60) it also fits, covering the at-limit branch of the budget arithmetic
-            var result = FileAttachmentValidator.Validate([path, upper], maxAttachmentBytes: 100);
-            var atLimit = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 60);
+        // Act - 60 bytes twice would exceed 100; deduplicated it fits, and exactly at the
+        // limit (60) it also fits, covering the at-limit branch of the budget arithmetic
+        var result = FileAttachmentValidator.Validate([path, upper], maxAttachmentBytes: 100);
+        var atLimit = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 60);
 
-            // Assert
-            Assert.Null(result.Error);
-            Assert.Single(result.Files);
-            Assert.Null(atLimit.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.Null(result.Error);
+        Assert.Single(result.Files);
+        Assert.Null(atLimit.Error);
     }
 
     [Fact]
     public void LockedFile_UnderBudget_ReportedAsUnreadableInStageTwo()
     {
         // Arrange - metadata (stage 1) succeeds under the lock; the content read (stage 2) fails
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "locked.txt");
-            File.WriteAllText(path, "content");
-            using var exclusiveLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "locked.txt");
+        File.WriteAllText(path, "content");
+        using var exclusiveLock = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
 
-            // Act
-            var result = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([path], maxAttachmentBytes: 100);
 
-            // Assert
-            Assert.NotNull(result.Error);
-            Assert.Contains("could not be read", result.Error);
-            Assert.DoesNotContain("exceed the attachment budget", result.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.NotNull(result.Error);
+        Assert.Contains("could not be read", result.Error);
+        Assert.DoesNotContain("exceed the attachment budget", result.Error);
     }
 
     [Fact]
     public void NulByte_ReportedAsBinary()
     {
         // Arrange
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "bin.dat");
-            File.WriteAllBytes(path, [0x61, 0x00, 0x62]);
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "bin.dat");
+        File.WriteAllBytes(path, [0x61, 0x00, 0x62]);
 
-            // Act
-            var result = FileAttachmentValidator.Validate([path], 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([path], 100);
 
-            // Assert
-            Assert.NotNull(result.Error);
-            Assert.Contains("appears to be binary (contains a NUL byte)", result.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.NotNull(result.Error);
+        Assert.Contains("appears to be binary (contains a NUL byte)", result.Error);
     }
 
     [Fact]
     public void Utf8Bom_IsStrippedFromContent()
     {
         // Arrange - BOM-prefixed file, as saved by common Windows tooling
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "bom.txt");
-            File.WriteAllBytes(path, [0xEF, 0xBB, 0xBF, 0x61, 0x62, 0x63]);
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "bom.txt");
+        File.WriteAllBytes(path, [0xEF, 0xBB, 0xBF, 0x61, 0x62, 0x63]);
 
-            // Act
-            var result = FileAttachmentValidator.Validate([path], 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([path], 100);
 
-            // Assert
-            Assert.Null(result.Error);
-            Assert.Equal("abc", Assert.Single(result.Files).Content);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.Null(result.Error);
+        Assert.Equal("abc", Assert.Single(result.Files).Content);
     }
 
     [Fact]
     public void InvalidUtf8WithoutNul_ReportedAsWrongEncoding()
     {
         // Arrange - 0xE4 alone is not valid UTF-8 and contains no NUL
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var path = Path.Combine(dir, "latin1.txt");
-            File.WriteAllBytes(path, [0x61, 0xE4, 0x62]);
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Root, "latin1.txt");
+        File.WriteAllBytes(path, [0x61, 0xE4, 0x62]);
 
-            // Act
-            var result = FileAttachmentValidator.Validate([path], 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([path], 100);
 
-            // Assert
-            Assert.NotNull(result.Error);
-            Assert.Contains("is not valid UTF-8", result.Error);
-        }
-        finally
-        {
-            Directory.Delete(dir, recursive: true);
-        }
+        // Assert
+        Assert.NotNull(result.Error);
+        Assert.Contains("is not valid UTF-8", result.Error);
     }
 
     [Fact]
     public void ValidFiles_ReturnedInOrderWithContent()
     {
         // Arrange
-        var dir = Directory.CreateTempSubdirectory().FullName;
-        try
-        {
-            var a = Path.Combine(dir, "a.txt");
-            var b = Path.Combine(dir, "b.txt");
-            File.WriteAllText(a, "alpha");
-            File.WriteAllText(b, "beta");
+        using var dir = new TempDir();
+        var a = Path.Combine(dir.Root, "a.txt");
+        var b = Path.Combine(dir.Root, "b.txt");
+        File.WriteAllText(a, "alpha");
+        File.WriteAllText(b, "beta");
 
-            // Act
-            var result = FileAttachmentValidator.Validate([b, a], 100);
+        // Act
+        var result = FileAttachmentValidator.Validate([b, a], 100);
 
-            // Assert
-            Assert.Null(result.Error);
-            Assert.Equal(2, result.Files.Count);
-            Assert.Equal(b, result.Files[0].Path);
-            Assert.Equal("beta", result.Files[0].Content);
-            Assert.Equal(a, result.Files[1].Path);
-            Assert.Equal("alpha", result.Files[1].Content);
-        }
-        finally
+        // Assert
+        Assert.Null(result.Error);
+        Assert.Equal(2, result.Files.Count);
+        Assert.Equal(b, result.Files[0].Path);
+        Assert.Equal("beta", result.Files[0].Content);
+        Assert.Equal(a, result.Files[1].Path);
+        Assert.Equal("alpha", result.Files[1].Content);
+    }
+
+    /// <summary>Disposable temp-directory scaffold; declared before any file lock so disposal order releases the lock first.</summary>
+    private sealed class TempDir : IDisposable
+    {
+        public string Root { get; } = Directory.CreateTempSubdirectory().FullName;
+
+        public void Dispose()
         {
-            Directory.Delete(dir, recursive: true);
+            Directory.Delete(Root, recursive: true);
         }
     }
 }
