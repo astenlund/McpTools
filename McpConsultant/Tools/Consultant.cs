@@ -20,8 +20,6 @@ internal class Consultant(
     IOptions<ConsultantSettings> settingsOptions,
     ILogger<Consultant> logger)
 {
-    private static readonly string[] AllowedEfforts = ["low", "high", "max"];
-
     private const string VpnFailureMessage =
         "The user must connect to Mullvad VPN before consultations can be performed. " +
         "Please inform the user and wait for them to connect before retrying the consultation.";
@@ -51,7 +49,7 @@ internal class Consultant(
 
             // Step 2: effort resolution and membership
             var resolvedEffort = string.IsNullOrWhiteSpace(effort) ? settings.DefaultEffort : effort;
-            var normalizedEffort = AllowedEfforts.FirstOrDefault(
+            var normalizedEffort = EffortLevels.Allowed.FirstOrDefault(
                 e => string.Equals(e, resolvedEffort?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (normalizedEffort is null)
             {

@@ -1,3 +1,5 @@
+using McpConsultant.Models;
+
 namespace McpConsultant.Services;
 
 /// <summary>
@@ -11,7 +13,7 @@ internal static class ErrorMessages
         ["empty-question"] = "question cannot be empty",
         ["missing-api-key"] = "no OpenRouter API key is configured (Consultant:ApiKey)",
         ["missing-default-model"] = "no model was given and Consultant:DefaultModel is not configured",
-        ["invalid-effort"] = "effort must be one of: low, high, max",
+        ["invalid-effort"] = $"effort must be one of: {string.Join(", ", EffortLevels.Allowed)}",
         ["non-positive-setting"] = "must be a positive number",
         ["vpn-not-connected"] = "Consultation unavailable:",
         ["file-not-fully-qualified"] = "is not a fully qualified path",
