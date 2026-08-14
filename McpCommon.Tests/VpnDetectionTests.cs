@@ -56,11 +56,11 @@ public class VpnDetectionTests
 
         if (isActive)
         {
-            _output.WriteLine("✅ Mullvad VPN detected!");
+            _output.WriteLine("Mullvad VPN detected!");
         }
         else
         {
-            _output.WriteLine("❌ Mullvad VPN NOT detected");
+            _output.WriteLine("Mullvad VPN NOT detected");
             _output.WriteLine("");
             _output.WriteLine("If VPN is connected but not detected:");
             _output.WriteLine("- Check the adapter list above for Mullvad/WireGuard/Wintun");
