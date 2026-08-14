@@ -18,11 +18,13 @@ public class ConsultantToolTests
         }
         """;
 
-    private static (Consultant Tool, StubHttpMessageHandler Handler) Build(Action<ConsultantSettings>? mutate = null)
+    private static (Consultant Tool, StubHttpMessageHandler Handler) Build(
+        Action<ConsultantSettings>? mutate = null,
+        StubHttpMessageHandler? handler = null)
     {
         var settings = new ConsultantSettings { ApiKey = "dummy-key" };
         mutate?.Invoke(settings);
-        var handler = new StubHttpMessageHandler(HttpStatusCode.OK, SuccessBody);
+        handler ??= new StubHttpMessageHandler(HttpStatusCode.OK, SuccessBody);
         var client = new OpenRouterClient(
             new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan },
             NullLogger<OpenRouterClient>.Instance);
@@ -203,25 +205,11 @@ public class ConsultantToolTests
     // catch clauses and their class substrings are exercised end to end (the spec's
     // stubbed-handler requirement). The VPN class stays covered by the template-table layer
     // alone, since it depends on live adapter state.
-    private static Consultant BuildWithHandler(StubHttpMessageHandler handler, int timeoutSeconds = 30)
-    {
-        var settings = new ConsultantSettings { ApiKey = "dummy-key", TimeoutSeconds = timeoutSeconds };
-        var client = new OpenRouterClient(
-            new HttpClient(handler) { Timeout = Timeout.InfiniteTimeSpan },
-            NullLogger<OpenRouterClient>.Instance);
-
-        return new Consultant(
-            client,
-            new VpnDetectionService(NullLogger<VpnDetectionService>.Instance),
-            Options.Create(settings),
-            NullLogger<Consultant>.Instance);
-    }
-
     [Fact]
     public async Task NonSuccessStatus_ReturnsHttpErrorClass()
     {
         // Arrange
-        var tool = BuildWithHandler(new StubHttpMessageHandler(System.Net.HttpStatusCode.InternalServerError, "boom"));
+        var (tool, _) = Build(handler: new StubHttpMessageHandler(HttpStatusCode.InternalServerError, "boom"));
 
         // Act
         var result = await tool.Consult("Q", null, null, null, null, CancellationToken.None);
@@ -234,7 +222,7 @@ public class ConsultantToolTests
     public async Task UnparseableBody_ReturnsUnusableResponseClass()
     {
         // Arrange
-        var tool = BuildWithHandler(new StubHttpMessageHandler(System.Net.HttpStatusCode.OK, "not json"));
+        var (tool, _) = Build(handler: new StubHttpMessageHandler(HttpStatusCode.OK, "not json"));
 
         // Act
         var result = await tool.Consult("Q", null, null, null, null, CancellationToken.None);
@@ -251,9 +239,9 @@ public class ConsultantToolTests
         {
             await Task.Delay(TimeSpan.FromSeconds(30), ct);
 
-            return new HttpResponseMessage(System.Net.HttpStatusCode.OK);
+            return new HttpResponseMessage(HttpStatusCode.OK);
         });
-        var tool = BuildWithHandler(handler, timeoutSeconds: 1);
+        var (tool, _) = Build(s => s.TimeoutSeconds = 1, handler);
 
         // Act
         var result = await tool.Consult("Q", null, null, null, null, CancellationToken.None);
@@ -266,7 +254,7 @@ public class ConsultantToolTests
     public async Task NetworkFailure_ReturnsNetworkFailureClass()
     {
         // Arrange
-        var tool = BuildWithHandler(new StubHttpMessageHandler((_, _) =>
+        var (tool, _) = Build(handler: new StubHttpMessageHandler((_, _) =>
             throw new HttpRequestException("connection refused")));
 
         // Act
