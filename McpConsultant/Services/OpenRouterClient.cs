@@ -38,7 +38,7 @@ public sealed class OpenRouterClient(HttpClient httpClient, ILogger<OpenRouterCl
         };
         request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
 
-        HttpResponseMessage response;
+        HttpResponseMessage? response = null;
         string responseBody;
         try
         {
@@ -47,7 +47,16 @@ public sealed class OpenRouterClient(HttpClient httpClient, ILogger<OpenRouterCl
         }
         catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !clientToken.IsCancellationRequested)
         {
+            response?.Dispose();
+
             throw new ConsultationTimeoutException(call.Timeout);
+        }
+        catch
+        {
+            // Client cancellation or transport failure below the timeout discriminator: dispose before propagating.
+            response?.Dispose();
+
+            throw;
         }
 
         using var _ = response;
