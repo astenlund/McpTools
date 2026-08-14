@@ -235,12 +235,7 @@ public class ConsultantToolTests
     public async Task Timeout_ReturnsTimeoutClassNamingConfiguredSeconds()
     {
         // Arrange - delayed handler against a 1-second configured timeout
-        var handler = new StubHttpMessageHandler(async (_, ct) =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
-
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
+        var handler = StubHttpMessageHandler.Delayed(TimeSpan.FromSeconds(30));
         var (tool, _) = Build(s => s.TimeoutSeconds = 1, handler);
 
         // Act
@@ -255,13 +250,7 @@ public class ConsultantToolTests
     {
         // Arrange - delayed handler; the client's own token fires mid-flight
         using var clientCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-        var handler = new StubHttpMessageHandler(async (_, ct) =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
-
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
-        var (tool, _) = Build(handler: handler);
+        var (tool, _) = Build(handler: StubHttpMessageHandler.Delayed(TimeSpan.FromSeconds(30)));
 
         // Act / Assert - the one sanctioned escape: a rethrown OperationCanceledException,
         // never a structured error string

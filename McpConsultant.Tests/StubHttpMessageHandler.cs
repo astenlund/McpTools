@@ -21,6 +21,15 @@ internal sealed class StubHttpMessageHandler : HttpMessageHandler
         _responder = responder;
     }
 
+    /// <summary>A responder that delays for the given time (observing cancellation) before returning 200 OK.</summary>
+    public static StubHttpMessageHandler Delayed(TimeSpan delay) =>
+        new(async (_, ct) =>
+        {
+            await Task.Delay(delay, ct);
+
+            return new HttpResponseMessage(HttpStatusCode.OK);
+        });
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         LastRequest = request;

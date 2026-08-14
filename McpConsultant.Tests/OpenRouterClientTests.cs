@@ -119,12 +119,7 @@ public class OpenRouterClientTests
     public async Task Timeout_ThrowsConsultationTimeoutException()
     {
         // Arrange - responder waits far longer than the 1-second call timeout
-        var handler = new StubHttpMessageHandler(async (_, ct) =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
-
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
+        var handler = StubHttpMessageHandler.Delayed(TimeSpan.FromSeconds(30));
 
         // Act / Assert
         await Assert.ThrowsAsync<ConsultationTimeoutException>(
@@ -136,12 +131,7 @@ public class OpenRouterClientTests
     {
         // Arrange
         using var clientCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
-        var handler = new StubHttpMessageHandler(async (_, ct) =>
-        {
-            await Task.Delay(TimeSpan.FromSeconds(30), ct);
-
-            return new HttpResponseMessage(HttpStatusCode.OK);
-        });
+        var handler = StubHttpMessageHandler.Delayed(TimeSpan.FromSeconds(30));
 
         // Act / Assert
         var ex = await Assert.ThrowsAnyAsync<OperationCanceledException>(
