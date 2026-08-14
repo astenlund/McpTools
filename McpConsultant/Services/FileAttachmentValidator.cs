@@ -22,7 +22,26 @@ internal static class FileAttachmentValidator
             return new FileValidationResult([], null);
         }
 
-        var stage1Errors = new List<string>();
+        var (passing, stage1Errors) = ValidateMetadata(files, maxAttachmentBytes);
+        if (stage1Errors.Count > 0)
+        {
+            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage1Errors)}.");
+        }
+
+        var (attached, stage2Errors) = ReadContents(passing);
+        if (stage2Errors.Count > 0)
+        {
+            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage2Errors)}.");
+        }
+
+        return new FileValidationResult(attached, null);
+    }
+
+    /// <summary>Stage 1: dedup, qualification, existence, and budget checks from metadata alone; no content is read.</summary>
+    private static (List<(string Path, long Length)> Passing, List<string> Errors) ValidateMetadata(
+        IReadOnlyList<string?> files, long maxAttachmentBytes)
+    {
+        var errors = new List<string>();
         var reportedInvalid = new HashSet<string>(StringComparer.Ordinal);
         var candidates = new List<string>();
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -35,7 +54,7 @@ internal static class FileAttachmentValidator
                 var display = element ?? "(null)";
                 if (reportedInvalid.Add(display))
                 {
-                    stage1Errors.Add($"'{display}' {ErrorMessages.StableSubstrings["file-not-fully-qualified"]}");
+                    errors.Add($"'{display}' {ErrorMessages.StableSubstrings["file-not-fully-qualified"]}");
                 }
 
                 continue;
@@ -55,14 +74,14 @@ internal static class FileAttachmentValidator
         {
             if (Directory.Exists(path))
             {
-                stage1Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-directory"]}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-directory"]}");
 
                 continue;
             }
 
             if (!File.Exists(path))
             {
-                stage1Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-missing"]}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-missing"]}");
 
                 continue;
             }
@@ -76,7 +95,7 @@ internal static class FileAttachmentValidator
             catch (Exception ex)
             {
                 // Metadata fault after the existence check (vanished file, unreachable share)
-                stage1Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-unreadable"]}: {ex.Message}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-unreadable"]}: {ex.Message}");
             }
         }
 
@@ -84,15 +103,16 @@ internal static class FileAttachmentValidator
         {
             // Sizes come from the guarded pass above; re-reading metadata here could throw unguarded.
             var sizes = string.Join(", ", passing.Select(p => $"'{p.Path}' ({p.Length} bytes)"));
-            stage1Errors.Add($"attached files {ErrorMessages.StableSubstrings["file-over-budget"]} of {maxAttachmentBytes} bytes: {sizes}");
+            errors.Add($"attached files {ErrorMessages.StableSubstrings["file-over-budget"]} of {maxAttachmentBytes} bytes: {sizes}");
         }
 
-        if (stage1Errors.Count > 0)
-        {
-            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage1Errors)}.");
-        }
+        return (passing, errors);
+    }
 
-        var stage2Errors = new List<string>();
+    /// <summary>Stage 2: read each passing file and enforce the text contract (no NUL bytes, strict UTF-8, BOM stripped).</summary>
+    private static (List<AttachedFile> Attached, List<string> Errors) ReadContents(List<(string Path, long Length)> passing)
+    {
+        var errors = new List<string>();
         var attached = new List<AttachedFile>();
         var strictUtf8 = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
@@ -105,14 +125,14 @@ internal static class FileAttachmentValidator
             }
             catch (Exception ex)
             {
-                stage2Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-unreadable"]}: {ex.Message}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-unreadable"]}: {ex.Message}");
 
                 continue;
             }
 
             if (bytes.Contains((byte)0))
             {
-                stage2Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-binary"]}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-binary"]}");
 
                 continue;
             }
@@ -130,15 +150,10 @@ internal static class FileAttachmentValidator
             }
             catch (DecoderFallbackException)
             {
-                stage2Errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-wrong-encoding"]}");
+                errors.Add($"'{path}' {ErrorMessages.StableSubstrings["file-wrong-encoding"]}");
             }
         }
 
-        if (stage2Errors.Count > 0)
-        {
-            return new FileValidationResult([], $"Error: file validation failed: {string.Join("; ", stage2Errors)}.");
-        }
-
-        return new FileValidationResult(attached, null);
+        return (attached, errors);
     }
 }
