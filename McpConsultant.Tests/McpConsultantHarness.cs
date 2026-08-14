@@ -185,7 +185,14 @@ public abstract class McpConsultantHarness(ITestOutputHelper output) : IDisposab
                 _stderrLines.Add(e.Data);
             }
 
-            _stderrSignal.Release();
+            try
+            {
+                _stderrSignal.Release();
+            }
+            catch (ObjectDisposedException)
+            {
+                // Dispose raced an in-flight stderr callback after Kill; nothing is waiting anymore.
+            }
         };
 
         _serverProcess.Start();
