@@ -2,7 +2,7 @@ using McpCommon.Services;
 using Microsoft.Extensions.Logging;
 using Xunit;
 
-namespace McpWeb.Tests;
+namespace McpCommon.Tests;
 
 /// <summary>
 /// Diagnostic tests for VPN detection.

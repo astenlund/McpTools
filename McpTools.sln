@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpConsultant", "McpConsult
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpConsultant.Tests", "McpConsultant.Tests\McpConsultant.Tests.csproj", "{AF75C6E5-6A73-46F2-B759-628C1F0AA85B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "McpCommon.Tests", "McpCommon.Tests\McpCommon.Tests.csproj", "{53AF15FF-4EB4-4CBA-821B-56D609FF7892}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -83,6 +85,18 @@ Global
 		{AF75C6E5-6A73-46F2-B759-628C1F0AA85B}.Release|x64.Build.0 = Release|Any CPU
 		{AF75C6E5-6A73-46F2-B759-628C1F0AA85B}.Release|x86.ActiveCfg = Release|Any CPU
 		{AF75C6E5-6A73-46F2-B759-628C1F0AA85B}.Release|x86.Build.0 = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|x64.Build.0 = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Debug|x86.Build.0 = Debug|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|Any CPU.Build.0 = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|x64.ActiveCfg = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|x64.Build.0 = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|x86.ActiveCfg = Release|Any CPU
+		{53AF15FF-4EB4-4CBA-821B-56D609FF7892}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
