@@ -1,0 +1,27 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcp-keep"
+version = "0.1.0"
+description = "Google Keep MCP server with list, read, archive, and unarchive tools."
+requires-python = ">=3.10"
+dependencies = ["gkeepapi==0.17.1", "mcp==2.3.0"]
+
+[project.scripts]
+mcp-keep = "mcp_keep.server:main"
+mcp-keep-auth = "mcp_keep.auth:main"
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.14,<1"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

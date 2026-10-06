@@ -4,7 +4,13 @@ This file provides guidance to coding agents (Claude Code, Codex, and others) wh
 
 ## Project Overview
 
-This repository contains multiple Model Context Protocol (MCP) servers built on .NET 10:
+This repository contains Model Context Protocol (MCP) servers built on .NET 10, plus the Python-based McpKeep server:
+
+### McpKeep
+
+Google Keep integration for Hermes on Windows, using the unofficial gkeepapi client and the Python MCP SDK over stdio. Its four tools are `list_notes`, `read_note`, `archive_note`, and `unarchive_note`. Each call uses a fresh backend process with a bounded lifetime; no note cache or pending writes are persisted. Google credentials live in a token file outside Git and are configured through `KEEP_EMAIL` and `KEEP_MASTER_TOKEN_FILE`.
+
+McpKeep is a standalone Python package under `McpKeep/`, separate from the .NET solution. Set up dependencies with `uv sync --project McpKeep --frozen`, run scoped tests with `uv run --project McpKeep pytest McpKeep/tests`, and check Python style with `uv run --project McpKeep ruff check McpKeep`. Setup and Hermes configuration are documented in `README_KEEP.md`; the governing spec is `.nightshift/specs/mcp-keep.md`.
 
 ### McpWeb (Active)
 MCP server that provides web search, URL fetching, and temporal context capabilities to LLM clients. Uses Serper.dev API (Google search) and optionally enforces Mullvad VPN connectivity before allowing searches or fetches. Provides current date/time/timezone to help LLMs use accurate dates in queries.
@@ -107,6 +113,7 @@ dotnet test --filter "FullyQualifiedName~McpConsultantIntegrationTests"
 **Shared**: `VpnDetectionService` lives in McpCommon and is shared by both servers.
 
 ### Configuration System
+- The hierarchy below applies to the .NET servers. McpKeep reads its `KEEP_EMAIL`, `KEEP_MASTER_TOKEN_FILE`, and `KEEP_TIMEOUT_SECONDS` environment settings; see `README_KEEP.md` for its separate Python setup.
 - Configuration hierarchy: `appsettings.json` → `appsettings.{Environment}.json` → environment variables → command-line arguments (see Program.cs)
 - Configuration sections: `Search`, `Fetch`, `Logging`, `Consultant`
 - Environment variable format: `Search__RequireVpn=false`, `Fetch__RequireVpn=true`, `Consultant__ApiKey=your-api-key-here` (double underscore for nested config)
