@@ -1,7 +1,6 @@
 # McpConsultant Design Spec
 
-Date: 2026-08-13
-Status: Implemented (first slice shipped; see FEATURES_HISTORY.md)
+Date: 2026-08-13 Status: Implemented (first slice shipped; see FEATURES_HISTORY.md)
 
 ## Overview
 

@@ -1,57 +1,20 @@
 # Quick wins
 
-Refactors ready to land when time allows; not blocking any feature, but
-would improve the codebase meaningfully.
+Refactors ready to land when time allows; not blocking any feature, but would improve the codebase meaningfully.
 
-This file is **one of four repo-local indexes** Claude reads on every
-session start (alongside `FEATURES.md`, `BUGS.md`, `PATTERNS.md`). Active
-entries are kept inline, organized under thematic `##` sections you
-invent as work emerges. When a quick win lands, append a shipped-note
-entry to [`QUICK_WINS_HISTORY.md`](QUICK_WINS_HISTORY.md); do not move
-it within this file. Negative-knowledge findings (approaches attempted
-and reverted) are first-class promotion candidates from the history
-into the relevant `.claude/patterns/<slug>.md` Cautionary tales sections.
+This file is **one of four repo-local indexes** Claude reads on every session start (alongside `FEATURES.md`, `BUGS.md`, `PATTERNS.md`). Active entries are kept inline, organized under thematic `##` sections you invent as work emerges. When a quick win lands, append a shipped-note entry to [`QUICK_WINS_HISTORY.md`](QUICK_WINS_HISTORY.md); do not move it within this file. Negative-knowledge findings (approaches attempted and reverted) are first-class promotion candidates from the history into the relevant `.claude/patterns/<slug>.md` Cautionary tales sections.
 
-Capture shorthand: name the refactor, describe the current smell in a
-sentence or two, sketch the preferred shape. A reader should be able to
-start work from the entry alone. Anchor entries on identifiers that
-survive refactors -- symbol names, entry titles, commit hashes, config
-keys -- never on line numbers, plan-phase ordinals, bullet positions,
-or temporal qualifiers ("new", "recent"): a precise locator that rots
-misleads harder than a coarse one that holds.
+Capture shorthand: name the refactor, describe the current smell in a sentence or two, sketch the preferred shape. A reader should be able to start work from the entry alone. Anchor entries on identifiers that survive refactors -- symbol names, entry titles, commit hashes, config keys -- never on line numbers, plan-phase ordinals, bullet positions, or temporal qualifiers ("new", "recent"): a precise locator that rots misleads harder than a coarse one that holds.
 
-**After adding a new entry, run `/nightshift:ready`** from the repo root
-to confirm it parses as a quick-wins work item against the real grammar
-in `skills/ready/ready.js`. Quick wins carry no `**Requires:**` line; the
-failure mode to catch is an entry that doesn't parse as a `- ` bullet or
-`###` heading (ready reports it as a prose-only-section notice) while you
-can still fix it in the same session.
+**After adding a new entry, run `/nightshift:ready`** from the repo root to confirm it parses as a quick-wins work item against the real grammar in `skills/ready/ready.js`. Quick wins carry no `**Requires:**` line; the failure mode to catch is an entry that doesn't parse as a `- ` bullet or `###` heading (ready reports it as a prose-only-section notice) while you can still fix it in the same session.
 
 ## Registration-time check
 
-- **Reword or strengthen the smoke-call threshold in `README_CONSULTANT.md`.**
-  Part two of the registration-time check treats an elapsed time over
-  100 seconds as establishing the long-running path, but exceeding
-  100 seconds only proves the client tolerates more than 100 seconds,
-  not the full `TimeoutSeconds` ceiling (300 by default). Either present
-  the criterion as the proxy it is (evidence that `MCP_TOOL_TIMEOUT`
-  overrode Claude Code's shorter built-in default) or extend the
-  procedure to drive a call near the configured ceiling.
-- **Add a correlation ID to the consultation lifecycle log lines.** The
-  `Consultation started` and `Consultation completed` lines emitted by
-  the `Consult` tool method in `Tools/Consultant.cs` share no
-  correlation identifier, which is why the README's registration-time
-  check pairs them by timestamp and imposes its single-in-flight
-  precondition. Emit a short per-consultation ID in both lines (a
-  logger scope or an explicit field), then drop the precondition from
-  `README_CONSULTANT.md` in the same change.
+- **Reword or strengthen the smoke-call threshold in `README_CONSULTANT.md`.** Part two of the registration-time check treats an elapsed time over 100 seconds as establishing the long-running path, but exceeding 100 seconds only proves the client tolerates more than 100 seconds, not the full `TimeoutSeconds` ceiling (300 by default). Either present the criterion as the proxy it is (evidence that `MCP_TOOL_TIMEOUT` overrode Claude Code's shorter built-in default) or extend the procedure to drive a call near the configured ceiling.
+- **Add a correlation ID to the consultation lifecycle log lines.** The `Consultation started` and `Consultation completed` lines emitted by the `Consult` tool method in `Tools/Consultant.cs` share no correlation identifier, which is why the README's registration-time check pairs them by timestamp and imposes its single-in-flight precondition. Emit a short per-consultation ID in both lines (a logger scope or an explicit field), then drop the precondition from `README_CONSULTANT.md` in the same change.
 
 ## (add sections as work emerges)
 
 ## History
 
-Implemented quick wins are archived in
-[`QUICK_WINS_HISTORY.md`](QUICK_WINS_HISTORY.md), read only when
-consulted (not at session start) so the active backlog above stays
-scannable. When a quick win lands, append its entry there rather
-than to this file.
+Implemented quick wins are archived in [`QUICK_WINS_HISTORY.md`](QUICK_WINS_HISTORY.md), read only when consulted (not at session start) so the active backlog above stays scannable. When a quick win lands, append its entry there rather than to this file.
