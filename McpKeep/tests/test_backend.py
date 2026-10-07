@@ -4,7 +4,7 @@ from copy import deepcopy
 import pytest
 from support import FixtureKeep, load_state, write_state
 
-from mcp_keep.backend import execute_request
+from mcp_keep.backend import execute_request, snapshot_fingerprint
 from mcp_keep.errors import KeepError
 
 
@@ -153,3 +153,36 @@ def test_unconfirmed_write_reports_uncertainty(keep_fixture):
 
     with pytest.raises(KeepError, match="may have reached Google"):
         execute_request("archive_note", {"note_id": ids["active"]}, RevertedKeep)
+
+
+@pytest.mark.parametrize("field", ["text", "attachments", "pinned", "labels"])
+def test_conditional_archive_rejects_a_changed_note_before_writing(keep_fixture, field):
+    path, ids, _ = keep_fixture
+    expected = call("read_note", note_id=ids["checklist"])
+    changes = {"text": "Older text", "attachments": {"images": 1}, "pinned": True, "labels": ["keep"]}
+    expected[field] = changes[field]
+    before = path.read_bytes()
+
+    with pytest.raises(KeepError, match="changed since its copy was verified"):
+        call("archive_note", note_id=ids["checklist"], expected_fingerprint=snapshot_fingerprint(expected))
+
+    assert path.read_bytes() == before
+    assert call("read_note", note_id=ids["checklist"])["archived"] is False
+
+
+def test_conditional_archive_accepts_the_verified_snapshot(keep_fixture):
+    _, ids, _ = keep_fixture
+    expected = call("read_note", note_id=ids["checklist"])
+
+    result = call("archive_note", note_id=ids["checklist"], expected_fingerprint=snapshot_fingerprint(expected))
+
+    assert result == {"id": ids["checklist"], "archived": True, "changed": True}
+
+
+@pytest.mark.parametrize("expected", [None, False, "snapshot", "a" * 63, "Z" * 64])
+def test_bad_archive_snapshot_fails_before_authentication(expected):
+    def unexpected_client():
+        pytest.fail("Invalid arguments must not construct a Google client")
+
+    with pytest.raises(KeepError, match="expected_fingerprint"):
+        execute_request("archive_note", {"note_id": "valid-id", "expected_fingerprint": expected}, unexpected_client)

@@ -7,7 +7,7 @@ name = "mcp-keep"
 version = "0.1.0"
 description = "Google Keep MCP server with list, read, archive, and unarchive tools."
 requires-python = ">=3.10"
-dependencies = ["gkeepapi==0.17.1", "mcp==2.3.0"]
+dependencies = ["gkeepapi==0.17.1", "mcp==2.3.0", "PyYAML==6.0.3"]
 
 [project.scripts]
 mcp-keep = "mcp_keep.server:main"

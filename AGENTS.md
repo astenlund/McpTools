@@ -8,7 +8,7 @@ This repository contains Model Context Protocol (MCP) servers built on .NET 10, 
 
 ### McpKeep
 
-Google Keep integration for Hermes on Windows, using the unofficial gkeepapi client and the Python MCP SDK over stdio. Its four tools are `list_notes`, `read_note`, `archive_note`, and `unarchive_note`. Each call uses a fresh backend process with a bounded lifetime; no note cache or pending writes are persisted. Google credentials live in a token file outside Git and are configured through `KEEP_EMAIL` and `KEEP_MASTER_TOKEN_FILE`.
+Google Keep integration for Hermes on Windows, using the unofficial gkeepapi client and the Python MCP SDK over stdio. Its four tools are `list_notes`, `read_note`, `archive_note`, and `unarchive_note`. Each call uses a fresh backend process with a bounded lifetime; no note cache or pending writes are persisted. Google credentials live in a token file outside Git and are configured through `KEEP_EMAIL` and `KEEP_MASTER_TOKEN_FILE`. The package also ships `mcp_keep.importer`, a script that copies notes into an Obsidian vault inbox and archives them in Keep; Hermes runs it as a script-only cron job.
 
 McpKeep is a standalone Python package under `McpKeep/`, separate from the .NET solution. Set up dependencies with `uv sync --project McpKeep --frozen`, run scoped tests with `uv run --project McpKeep pytest McpKeep/tests`, and check Python style with `uv run --project McpKeep ruff check McpKeep`. Setup and Hermes configuration are documented in `README_KEEP.md`; the governing spec is `.nightshift/specs/mcp-keep.md`.
 
