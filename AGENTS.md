@@ -238,8 +238,8 @@ See README_IMAGE_GEN.md for detailed architecture and implementation plan.
 - Auto-selection: system picks best character reference from 3-5 candidates using quality heuristics
 
 **Testing Status:**
-- InstantID: ❌ Ruled out (issues with pixel art style compatibility)
-- IP-Adapter: 🔄 Currently testing
+- InstantID: Ruled out (issues with pixel art style compatibility)
+- IP-Adapter: Currently testing
 
 **Reference Workflows:**
 - `ComfyUI/inspiration/workflow-flux-consistent-character-sheet-oSEKBwDLvkt9rHMfdU1b-reverentelusarca-openart.ai.json`
