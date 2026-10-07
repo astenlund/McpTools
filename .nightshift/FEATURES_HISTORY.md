@@ -10,6 +10,6 @@ The feature breakout file at `features/<slug>.md` stays in place as the historic
 
 ## Entries
 
-- [McpKeep](../.nightshift/specs/mcp-keep.md): implemented locally 2026-10-07. Windows stdio Python MCP server for Hermes using gkeepapi, exposing exactly list, read, archive, and unarchive. Includes protected local token setup, receive-only synchronization, original-metadata preservation, a single mutation transport attempt, and 94 offline tests. Live Google verification remains unperformed; setup and Hermes configuration are in [README_KEEP.md](../README_KEEP.md).
+- [McpKeep](specs/mcp-keep.md): implemented locally 2026-10-07. Windows stdio Python MCP server for Hermes using gkeepapi, exposing exactly list, read, archive, and unarchive. Includes protected local token setup, receive-only synchronization, original-metadata preservation, a single mutation transport attempt, and 94 offline tests. Live Google verification remains unperformed; setup and Hermes configuration are in [README_KEEP.md](../README_KEEP.md).
 
 - [McpConsultant](features/mcp-consultant.md): first slice shipped 2026-08-13. Stdio MCP server exposing a single `consult` tool for second opinions from external models via OpenRouter; includes the McpCommon extraction (`VpnDetectionService`, `VpnNotConnectedException`) shared with McpWeb. The breakout file is the review-graduated design spec. Unvetted follow-up findings are tracked as an exploring draft in `FEATURES.md`.

@@ -66,3 +66,4 @@ desktop.ini
 # Sensitive configuration files
 appsettings.Development.json
 appsettings.Local.json
+/.nightshift/runs/

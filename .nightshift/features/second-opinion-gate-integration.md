@@ -4,7 +4,7 @@ status: exploring
 
 # Second-opinion gate integration
 
-Source: fit assessment of McpConsultant against the Nightshift plugin's second-opinion-gates feature (`.claude/features/second-opinion-gates.md` in the Nightshift repository), 2026-08-15. That feature adds cheap holistic reads by a different-model-family agent at lifecycle checkpoints; `consult` is the natural cross-family channel, since a Claude Code session can otherwise only spawn Claude-family subagents. The fit is close (stateless one-shot, per-call `model`, file attachments carrying the artifact plus scoped context), but three friction points surfaced. Each needs vetting before it graduates to a themed section; the contract question also decides how much of the integration lands in this repository versus in the Nightshift plugin.
+Source: fit assessment of McpConsultant against the Nightshift plugin's second-opinion-gates feature (`.nightshift/features/second-opinion-gates.md` in the Nightshift repository), 2026-08-15. That feature adds cheap holistic reads by a different-model-family agent at lifecycle checkpoints; `consult` is the natural cross-family channel, since a Claude Code session can otherwise only spawn Claude-family subagents. The fit is close (stateless one-shot, per-call `model`, file attachments carrying the artifact plus scoped context), but three friction points surfaced. Each needs vetting before it graduates to a themed section; the contract question also decides how much of the integration lands in this repository versus in the Nightshift plugin.
 
 ## The three friction points
 
