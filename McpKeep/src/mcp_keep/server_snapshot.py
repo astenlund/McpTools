@@ -8,6 +8,21 @@ from gkeepapi.node import List, NodeTimestamps, Note
 from mcp_keep.errors import KeepError
 
 
+def _server_time(value: object) -> str | None:
+    """Server times as ISO 8601 UTC; absent and epoch-zero values mean unset."""
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise KeepError("Google Keep returned unusable note metadata.")
+    try:
+        parsed = NodeTimestamps.str_to_dt(value)
+    except ValueError:
+        raise KeepError("Google Keep returned unusable note metadata.") from None
+    if parsed <= NodeTimestamps.int_to_dt(0):
+        return None
+    return parsed.isoformat(timespec="milliseconds").replace("+00:00", "Z")
+
+
 class ServerSnapshots:
     """Metadata belongs to one disposable client and is refreshed by server pages.
 
@@ -53,6 +68,15 @@ class ServerSnapshots:
         payload["isArchived"] = archived
         timestamps["updated"] = NodeTimestamps.dt_to_str(datetime.now(tz=timezone.utc))
         return payload
+
+    def timestamps(self, note: Note | List) -> dict[str, str | None]:
+        timestamps = self.metadata(note.id).get("timestamps")
+        if not isinstance(timestamps, dict):
+            raise KeepError("Google Keep returned unusable note metadata.")
+        return {
+            "created": _server_time(timestamps.get("created")),
+            "edited": _server_time(timestamps.get("userEdited")),
+        }
 
     def labels(self, note: Note | List) -> list[str]:
         entries = self.metadata(note.id).get("labelIds", [])

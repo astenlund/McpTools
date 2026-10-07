@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import gkeepapi
+from gkeepapi.node import Blob, NodeAudio, NodeDrawing, NodeImage, WebLink
 
 
 def write_state(path: Path, state: dict) -> None:
@@ -22,6 +23,13 @@ def clean_client(client: gkeepapi.Keep) -> None:
         label.save()
 
 
+def add_blob(note, media) -> Blob:
+    blob = Blob(parent_id=note.id)
+    blob.blob = media
+    note.append(blob)
+    return blob
+
+
 def seed_state(path: Path) -> dict[str, str]:
     client = gkeepapi.Keep()
     active = client.createNote("Inbox", "Buy Milk\nPlan a trip")
@@ -30,6 +38,13 @@ def seed_state(path: Path) -> dict[str, str]:
     active.labels.add(label)
     archived = client.createNote("Old plans", "Keep this")
     archived.archived = True
+    for media in (NodeImage(), NodeImage(), NodeDrawing(), NodeAudio(), None):
+        add_blob(archived, media)
+    add_blob(archived, NodeImage()).trash()
+    link = WebLink()
+    link.url = "https://example.com/plans"
+    link.title = "Plans"
+    archived.annotations.append(link)
     checklist = client.createList("Groceries", [])
     parent = checklist.add("Fruit", False, 30000)
     child = checklist.add("Apples", True, 20000)

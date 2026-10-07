@@ -3,7 +3,7 @@
 from typing import Any
 
 import gkeepapi
-from gkeepapi.node import List, Note
+from gkeepapi.node import List, NodeAudio, NodeDrawing, NodeImage, Note
 
 from mcp_keep.config import read_credentials
 from mcp_keep.errors import AUTH_FAILED, UNCERTAIN_WRITE, KeepError
@@ -11,6 +11,7 @@ from mcp_keep.sync_boundary import SyncBoundary
 
 ARCHIVE_STATES = ("active", "archived", "all")
 OPERATIONS = ("list_notes", "read_note", "archive_note", "unarchive_note")
+ATTACHMENT_KINDS = {NodeImage: "images", NodeDrawing: "drawings", NodeAudio: "audio"}
 
 
 def validate_request(operation: str, arguments: dict[str, Any]) -> None:
@@ -49,12 +50,24 @@ def summary(note: Note | List, boundary: SyncBoundary) -> dict[str, Any]:
         "archived": note.archived,
         "pinned": note.pinned,
         "labels": boundary.labels(note),
+        **boundary.timestamps(note),
     }
+
+
+def attachment_counts(note: Note | List) -> dict[str, int]:
+    """Media the text does not carry; unknown blob kinds count as other."""
+    counts = dict.fromkeys(("images", "drawings", "audio", "other"), 0)
+    for blob in note.blobs:
+        if not blob.trashed and not blob.deleted:
+            counts[ATTACHMENT_KINDS.get(type(blob.blob), "other")] += 1
+    return counts
 
 
 def read_note(note: Note | List, boundary: SyncBoundary) -> dict[str, Any]:
     result = summary(note, boundary)
     result["text"] = note.text
+    result["attachments"] = attachment_counts(note)
+    result["links"] = [{"url": link.url, "title": link.title} for link in note.annotations.links]
     if isinstance(note, List):
         result["items"] = [
             {

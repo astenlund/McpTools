@@ -1,3 +1,4 @@
+import re
 from copy import deepcopy
 
 import pytest
@@ -45,6 +46,25 @@ def test_read_text_labels_and_nested_checklist(keep_fixture):
     assert [item["text"] for item in checklist["items"]] == ["Fruit", "Apples", "Coffee"]
     assert checklist["items"][1]["checked"] is True
     assert checklist["items"][1]["parent_item_id"] == ids["parent"]
+
+
+def test_read_reports_server_times_attachments_and_links(keep_fixture):
+    _, ids, _ = keep_fixture
+    note = call("read_note", note_id=ids["archived"])
+    assert note["attachments"] == {"images": 2, "drawings": 1, "audio": 1, "other": 1}
+    assert note["links"] == [{"url": "https://example.com/plans", "title": "Plans"}]
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z", note["created"])
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z", note["edited"])
+    plain = call("read_note", note_id=ids["active"])
+    assert plain["attachments"] == {"images": 0, "drawings": 0, "audio": 0, "other": 0}
+    assert plain["links"] == []
+
+
+def test_list_summaries_carry_server_times_but_not_media(keep_fixture):
+    for note in call("list_notes", state="all")["notes"]:
+        assert note["created"] is not None
+        assert "edited" in note
+        assert "attachments" not in note
 
 
 @pytest.mark.parametrize("kind", ["trashed", "deleted", "child", "unknown"])

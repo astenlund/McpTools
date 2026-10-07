@@ -6,12 +6,14 @@ A small Google Keep MCP server for Hermes on Windows. It uses Python, the offici
 
 | Tool | Arguments | Result |
 | --- | --- | --- |
-| `list_notes` | `state`: `active` (default), `archived`, or `all`; optional `query`; `limit`: 1 to 200 (default 50); `offset`: nonnegative (default 0) | Note summaries and `next_offset`, or null when there are no more results. |
-| `read_note` | `note_id` | Text, labels, archive and pin status, and ordered checklist items with checked state and parent item IDs. |
+| `list_notes` | `state`: `active` (default), `archived`, or `all`; optional `query`; `limit`: 1 to 200 (default 50); `offset`: nonnegative (default 0) | Note summaries (ID, title, type, archive and pin status, labels, and creation and last-edit times) and `next_offset`, or null when there are no more results. |
+| `read_note` | `note_id` | The summary fields plus text, attachment counts (`images`, `drawings`, `audio`, `other`), web links, and ordered checklist items with checked state and parent item IDs. |
 | `archive_note` | `note_id` | ID, archive status, and whether it changed. |
 | `unarchive_note` | `note_id` | ID, archive status, and whether it changed. |
 
-Use IDs returned by `list_notes`. Trashed and deleted notes are unavailable. There are no create, edit, delete, checklist-update, or bulk-mutation tools. Archive and unarchive leave content unchanged, and repeating the requested state is a successful no-op. Image, drawing, and audio downloads are not supported.
+Use IDs returned by `list_notes`. Trashed and deleted notes are unavailable. There are no create, edit, delete, checklist-update, or bulk-mutation tools. Archive and unarchive leave content unchanged, and repeating the requested state is a successful no-op. Image, drawing, and audio downloads are not supported; `read_note` counts them so a caller can tell when the text alone is incomplete.
+
+Times are ISO 8601 UTC with millisecond precision (`2019-05-04T03:02:01.123Z`), taken from Google's own metadata: `created` and `edited` (the last user edit). Either is null when Google reports it as unset. The SDK's locally generated update time is never returned.
 
 The list query matches a case-insensitive substring of title or text. Results are ordered by note ID. Pass `next_offset` back as `offset` while retaining the same filters. Each call fetches current data; additions, removals, and archive changes between pages can cause skips or repeats. Pagination is not a frozen snapshot.
 
@@ -69,7 +71,7 @@ Tools remain discoverable before credentials are configured. Missing credentials
 
 Each operation authenticates a fresh backend process and synchronizes current notes, so large accounts can take longer to read. Calls are serialized and share a deadline covering queueing and worker execution. Timed-out workers are terminated; each worker also enforces its own deadline if its parent disappears. Failed local changes cannot be uploaded by a later read.
 
-The sync guard makes initial loading and confirmation receive-only. Archive payloads preserve original server metadata, including removed-label markers. A separate transport guard permits one mutation attempt and disables redirects for it, so SDK retries cannot resend a failed write. Read results omit SDK-generated update timestamps and exclude removed label associations.
+The sync guard makes initial loading and confirmation receive-only. Archive payloads preserve original server metadata, including removed-label markers. A separate transport guard permits one mutation attempt and disables redirects for it, so SDK retries cannot resend a failed write. Read results take their times from captured server metadata rather than the hydrated SDK objects, and exclude removed label associations.
 
 A write failure may mean Google applied the change before its reply was lost. In that case the error asks you to read the note's current state before deciding whether to retry. The server does not replay failed writes. Cancellation does not undo a change already accepted by Google.
 
@@ -81,6 +83,6 @@ uv run --project C:/Git/McpTools/McpKeep --frozen ruff check C:/Git/McpTools/Mcp
 uv run --project C:/Git/McpTools/McpKeep --frozen ruff format --check C:/Git/McpTools/McpKeep
 ```
 
-The offline suite uses real gkeepapi note and checklist representations and exercises the stdio MCP protocol with a fake Google backend. It checks filtering, pagination, unavailable notes, archive round trips, content preservation, credential errors, secret suppression, concurrency, and worker termination. It makes no Google requests. Live Google authentication and archive behavior remain separate verification steps after setup.
+The offline suite uses real gkeepapi note and checklist representations and exercises the stdio MCP protocol with a fake Google backend. It checks filtering, pagination, unavailable notes, server-sourced times, attachment counts, archive round trips, content preservation, credential errors, secret suppression, concurrency, and worker termination. It makes no Google requests. Live Google authentication and archive behavior remain separate verification steps after setup.
 
 For a live check, ask Hermes to list and read notes first. Choose a note you want to archive, confirm it appears in the archived listing, then unarchive it and confirm it returns to the active listing with its content intact. Live verification has not been performed as part of this delivery.

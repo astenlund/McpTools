@@ -5,6 +5,7 @@ import pytest
 
 from mcp_keep.backend import execute_request
 from mcp_keep.errors import KeepError
+from mcp_keep.server_snapshot import ServerSnapshots
 from mcp_keep.sync_boundary import SyncBoundary
 
 
@@ -213,6 +214,37 @@ def test_read_results_exclude_removed_association_with_existing_account_definiti
         result = next(note for note in result["notes"] if note["id"] == fixture.target_id)
     assert result["labels"] == []
     assert all(not call["nodes"] and not call["labels"] for call in fixture.calls)
+
+
+@pytest.mark.parametrize("operation", ["list_notes", "read_note"])
+def test_read_times_come_from_server_metadata(monkeypatch, operation):
+    fixture = GoogleFixture(delete_initial=False)
+    raw = next(node for node in fixture.nodes if node["id"] == fixture.target_id)
+    raw["timestamps"]["created"] = "2019-05-04T03:02:01.123456Z"
+    raw["timestamps"]["userEdited"] = "1970-01-01T00:00:00.000000Z"
+    bind_google(monkeypatch, fixture)
+    arguments = {} if operation == "list_notes" else {"note_id": fixture.target_id}
+    result = execute_request(operation, arguments)
+    if operation == "list_notes":
+        result = next(note for note in result["notes"] if note["id"] == fixture.target_id)
+    assert result["created"] == "2019-05-04T03:02:01.123Z"
+    assert result["edited"] is None
+    assert "updated" not in result
+
+
+@pytest.mark.parametrize("created", [12345, ["2019-05-04T03:02:01.123456Z"]])
+def test_unusable_server_times_fail_instead_of_guessing(created):
+    note = gkeepapi.Keep().createNote("Times", "Body")
+    raw = note.save()
+    raw["timestamps"]["created"] = created
+    del raw["timestamps"]["userEdited"]
+    snapshots = ServerSnapshots()
+    snapshots.observe({"nodes": [raw]})
+    with pytest.raises(KeepError, match="unusable note metadata"):
+        snapshots.timestamps(note)
+    raw["timestamps"]["created"] = "2019-05-04T03:02:01.123456Z"
+    snapshots.observe({"nodes": [raw]})
+    assert snapshots.timestamps(note) == {"created": "2019-05-04T03:02:01.123Z", "edited": None}
 
 
 def test_missing_or_invalidated_server_baseline_cannot_authorize_a_write():

@@ -45,6 +45,9 @@ class SyncBoundary:
     def labels(self, note: Note | List) -> list[str]:
         return self._snapshots.labels(note)
 
+    def timestamps(self, note: Note | List) -> dict[str, str | None]:
+        return self._snapshots.timestamps(note)
+
     def changes(self, target_version=None, nodes=None, labels=None):
         payload = self._pending_write
         self._pending_write = None

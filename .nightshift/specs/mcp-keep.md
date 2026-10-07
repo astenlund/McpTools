@@ -10,14 +10,14 @@ Expose exactly these four tools, with machine-readable results and stable Google
 
 | Tool | Behavior |
 | --- | --- |
-| `list_notes` | List active, archived, or all notes, with bounded pages and optional text filtering. Default to active notes. Return IDs and useful summaries for selecting a note. |
-| `read_note` | Read a note by ID, including its text, checklist items, labels, and archive status. Preserve checklist order, checked state, and nesting in the returned representation. |
+| `list_notes` | List active, archived, or all notes, with bounded pages and optional text filtering. Default to active notes. Return IDs and useful summaries for selecting a note, including creation and last-edit times. |
+| `read_note` | Read a note by ID, including its text, checklist items, labels, archive status, creation and last-edit times, attachment counts, and web links. Preserve checklist order, checked state, and nesting in the returned representation. |
 | `archive_note` | Archive one note by ID. Already archived is a successful no-op. |
 | `unarchive_note` | Restore one archived note by ID. Already active is a successful no-op. |
 
 Trashed and deleted notes are excluded from every operation. Unknown, trashed, deleted, and non-note IDs produce clear errors. Empty listings succeed with an empty page. Invalid filter and pagination arguments fail without performing a mutation. Pagination must communicate whether more results exist; documentation states how changes between calls affect traversal.
 
-No creation, content editing, deletion, checklist changes, or bulk mutations. Archive and unarchive preserve titles, bodies, labels, checklist contents, and other unrelated note data. Image, drawing, and audio download is outside this scope; reading their containing notes still returns available textual content.
+No creation, content editing, deletion, checklist changes, or bulk mutations. Archive and unarchive preserve titles, bodies, labels, checklist contents, and other unrelated note data. Image, drawing, and audio download is outside this scope; reading their containing notes still returns available textual content, together with how many of each the note holds, so a caller can tell when the text alone is incomplete. Times come from Google's own note metadata, never from timestamps the SDK generates locally.
 
 ## Connection and authentication
 
@@ -37,7 +37,7 @@ Protect reads and writes from consequential hangs and unbounded retry behavior. 
 
 ## Acceptance evidence
 
-Offline tests exercise the actual MCP protocol and gkeepapi data structures without contacting Google. Verify exactly four advertised tools, active/archive/all filtering, text filtering, bounded pagination, empty results, invalid arguments, checklist reads, unavailable-note errors, idempotent archive/unarchive, archive round trips, preservation of unrelated data, overlapping calls, and recovery after authentication, read, and write failures. Verify that sensitive backend error text cannot escape through MCP responses or stderr.
+Offline tests exercise the actual MCP protocol and gkeepapi data structures without contacting Google. Verify exactly four advertised tools, active/archive/all filtering, text filtering, bounded pagination, empty results, invalid arguments, checklist reads, server-sourced times, attachment counts, unavailable-note errors, idempotent archive/unarchive, archive round trips, preservation of unrelated data, overlapping calls, and recovery after authentication, read, and write failures. Verify that sensitive backend error text cannot escape through MCP responses or stderr.
 
 Include dependency locking, local authentication instructions, Windows setup commands, and the Hermes stdio configuration. Use the supported Python SDK surface verified against the installed package. Run scoped tests and relevant static checks, and distinguish offline evidence from live Google verification. If credentials are unavailable, deliver the tested server and setup instructions while explicitly reporting that live Google verification remains unperformed.
 
