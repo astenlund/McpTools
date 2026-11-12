@@ -1,9 +1,11 @@
 using System.Net;
+using System.Text.RegularExpressions;
 
 using McpCommon.Services;
 using McpConsultant.Models;
 using McpConsultant.Services;
 using McpConsultant.Tools;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
@@ -18,9 +20,12 @@ public class ConsultantToolTests
         }
         """;
 
+    private static readonly Regex LifecycleLine = new(@"^Consultation (?<event>started|completed|cancelled|failed) \[(?<id>[0-9a-f]{8})\]");
+
     private static (Consultant Tool, StubHttpMessageHandler Handler) Build(
         Action<ConsultantSettings>? mutate = null,
-        StubHttpMessageHandler? handler = null)
+        StubHttpMessageHandler? handler = null,
+        CapturingLogger<Consultant>? logger = null)
     {
         var settings = new ConsultantSettings { ApiKey = "dummy-key" };
         mutate?.Invoke(settings);
@@ -32,10 +37,19 @@ public class ConsultantToolTests
             client,
             new VpnDetectionService(NullLogger<VpnDetectionService>.Instance),
             Options.Create(settings),
-            NullLogger<Consultant>.Instance);
+            (ILogger<Consultant>?)logger ?? NullLogger<Consultant>.Instance);
 
         return (tool, handler);
     }
+
+    /// <summary>
+    /// Maps each lifecycle line in capture order to its event and consultation ID.
+    /// </summary>
+    private static List<(string Event, string Id)> LifecycleEvents(CapturingLogger<Consultant> logger) =>
+        [.. logger.Messages
+            .Select(m => LifecycleLine.Match(m))
+            .Where(m => m.Success)
+            .Select(m => (m.Groups["event"].Value, m.Groups["id"].Value))];
 
     [Fact]
     public async Task EmptyQuestion_ReturnsError_WithoutHttp()
@@ -271,5 +285,73 @@ public class ConsultantToolTests
         // Assert
         Assert.Contains("network failure calling OpenRouter", result);
         Assert.Contains("connection refused", result);
+    }
+
+    [Fact]
+    public async Task Success_StartedAndCompletedLinesShareConsultationId()
+    {
+        // Arrange
+        var logger = new CapturingLogger<Consultant>();
+        var (tool, _) = Build(logger: logger);
+
+        // Act
+        await tool.Consult("Q", null, null, null, null, CancellationToken.None);
+
+        // Assert
+        var events = LifecycleEvents(logger);
+        Assert.Equal(["started", "completed"], events.Select(e => e.Event));
+        Assert.Equal(events[0].Id, events[1].Id);
+    }
+
+    [Fact]
+    public async Task SeparateCalls_GetDistinctConsultationIds()
+    {
+        // Arrange
+        var logger = new CapturingLogger<Consultant>();
+        var (tool, _) = Build(logger: logger);
+
+        // Act
+        await tool.Consult("Q", null, null, null, null, CancellationToken.None);
+        await tool.Consult("Q", null, null, null, null, CancellationToken.None);
+
+        // Assert
+        var startedIds = LifecycleEvents(logger).Where(e => e.Event == "started").Select(e => e.Id).ToList();
+        Assert.Equal(2, startedIds.Count);
+        Assert.NotEqual(startedIds[0], startedIds[1]);
+    }
+
+    [Fact]
+    public async Task ClientCancellation_CancelledLineCarriesStartedId()
+    {
+        // Arrange
+        var logger = new CapturingLogger<Consultant>();
+        using var clientCts = new CancellationTokenSource(TimeSpan.FromMilliseconds(200));
+        var (tool, _) = Build(handler: StubHttpMessageHandler.Delayed(TimeSpan.FromSeconds(30)), logger: logger);
+
+        // Act
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => tool.Consult("Q", null, null, null, null, clientCts.Token));
+
+        // Assert
+        var events = LifecycleEvents(logger);
+        Assert.Equal(["started", "cancelled"], events.Select(e => e.Event));
+        Assert.Equal(events[0].Id, events[1].Id);
+    }
+
+    [Fact]
+    public async Task RequestFailure_FailedLineCarriesStartedIdAndError()
+    {
+        // Arrange
+        var logger = new CapturingLogger<Consultant>();
+        var (tool, _) = Build(handler: new StubHttpMessageHandler(HttpStatusCode.InternalServerError, "boom"), logger: logger);
+
+        // Act
+        var result = await tool.Consult("Q", null, null, null, null, CancellationToken.None);
+
+        // Assert
+        var events = LifecycleEvents(logger);
+        Assert.Equal(["started", "failed"], events.Select(e => e.Event));
+        Assert.Equal(events[0].Id, events[1].Id);
+        Assert.EndsWith(result, logger.Messages[^1]);
     }
 }

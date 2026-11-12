@@ -11,7 +11,6 @@ Capture shorthand: name the refactor, describe the current smell in a sentence o
 ## Registration-time check
 
 - **Reword or strengthen the smoke-call threshold in `README_CONSULTANT.md`.** Part two of the registration-time check treats an elapsed time over 100 seconds as establishing the long-running path, but exceeding 100 seconds only proves the client tolerates more than 100 seconds, not the full `TimeoutSeconds` ceiling (300 by default). Either present the criterion as the proxy it is (evidence that `MCP_TOOL_TIMEOUT` overrode Claude Code's shorter built-in default) or extend the procedure to drive a call near the configured ceiling.
-- **Add a correlation ID to the consultation lifecycle log lines.** The `Consultation started` and `Consultation completed` lines emitted by the `Consult` tool method in `Tools/Consultant.cs` share no correlation identifier, which is why the README's registration-time check pairs them by timestamp and imposes its single-in-flight precondition. Emit a short per-consultation ID in both lines (a logger scope or an explicit field), then drop the precondition from `README_CONSULTANT.md` in the same change.
 
 ## (add sections as work emerges)
 

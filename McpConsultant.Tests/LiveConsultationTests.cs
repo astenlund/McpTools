@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 using Microsoft.Extensions.Configuration;
 
 namespace McpConsultant.Tests;
@@ -142,6 +144,9 @@ public sealed class LiveConsultationTests(ITestOutputHelper output) : McpConsult
         // Assert
         var cancelled = await WaitForStderrLineAsync("Consultation cancelled", TimeSpan.FromSeconds(5));
         Assert.NotNull(cancelled);
+        var startedId = Regex.Match(started, @"Consultation started \[([0-9a-f]{8})\]").Groups[1].Value;
+        Assert.NotEmpty(startedId);
+        Assert.Contains($"Consultation cancelled [{startedId}]", cancelled);
         var completed = await WaitForStderrLineAsync("Consultation completed", TimeSpan.FromSeconds(10));
         Assert.Null(completed);
     }

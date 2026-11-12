@@ -73,13 +73,13 @@ MCP_TOOL_TIMEOUT=300000
 
 ### Registration-time check
 
-Run this once at registration, with no other consultation in flight. The single-in-flight precondition matters because the check pairs stderr log lines by timestamp rather than by a correlation identifier, so an overlapping consultation makes the pairing ambiguous.
+Run this once at registration. Every consultation lifecycle line on stderr carries that consultation's eight-character ID in brackets (for example `Consultation started [a1b2c3d4]: ...`), so the check pairs a call's lines by that ID and stays unambiguous even when other consultations overlap it.
 
 **Part one, configuration inspection:** confirm `MCP_TOOL_TIMEOUT`, interpreted in milliseconds, is greater than or equal to `TimeoutSeconds` converted to milliseconds (`300000` for the default `TimeoutSeconds` of 300). If the variable is unset, Claude Code's own built-in default governs instead of `TimeoutSeconds`, so set it explicitly per the instruction above rather than relying on that default.
 
-**Part two, a smoke call:** run one consultation through the registered client, pinned to a reasoning model at `effort: max` with a deliberately heavy prompt, and read its elapsed time from the timestamps on the `Consultation started` and `Consultation completed` stderr lines. Elapsed time must exceed 100 seconds to establish that the call actually exercised the long-running path; a run that finishes at or under 100 seconds is inconclusive, not a pass, and should be re-run with a heavier prompt. If that precondition is met and the answer arrives through the client, the check passes.
+**Part two, a smoke call:** run one consultation through the registered client, pinned to a reasoning model at `effort: max` with a deliberately heavy prompt, and read its elapsed time from the `Consultation started` and `Consultation completed` entries that carry the same ID. The console formatter writes each log entry as two stderr lines, a timestamped header line followed by the message line, so find the two message lines by the ID and read each timestamp from the header line directly above it. Elapsed time must exceed 100 seconds to establish that the call actually exercised the long-running path; a run that finishes at or under 100 seconds is inconclusive, not a pass, and should be re-run with a heavier prompt. If that precondition is met and the answer arrives through the client, the check passes.
 
-To find the server's stderr: Claude Code persists each registered server's stderr to its per-server MCP log files, which is where the `Consultation started` and `Consultation completed` timestamped lines are read from.
+To find the server's stderr: Claude Code persists each registered server's stderr to its per-server MCP log files, which is where the `Consultation started` and `Consultation completed` entries and their timestamped header lines are read from.
 
 ## Upgrading
 

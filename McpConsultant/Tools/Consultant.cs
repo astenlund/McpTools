@@ -37,6 +37,9 @@ internal class Consultant(
         [Description("Optional reasoning effort: low, high, or max (default: high)")] string? effort = null,
         CancellationToken cancellationToken = default)
     {
+        // Correlates this call's lifecycle lines on stderr, so overlapping consultations stay pairable.
+        var consultationId = Guid.NewGuid().ToString("N")[..8];
+
         try
         {
             var settings = settingsOptions.Value;
@@ -99,7 +102,7 @@ internal class Consultant(
                 : settings.SystemPrompt;
             var userMessage = PromptAssembler.BuildUserMessage(question, context, validation.Files);
 
-            logger.LogInformation("Consultation started: {Model} (effort: {Effort})", resolvedModel, normalizedEffort);
+            logger.LogInformation("Consultation started [{ConsultationId}]: {Model} (effort: {Effort})", consultationId, resolvedModel, normalizedEffort);
 
             var result = await openRouterClient.ConsultAsync(
                 new OpenRouterCall
@@ -116,14 +119,15 @@ internal class Consultant(
             if (result.Usage is not null)
             {
                 logger.LogInformation(
-                    "Consultation completed: prompt={PromptTokens} completion={CompletionTokens} reasoning={ReasoningTokens}",
+                    "Consultation completed [{ConsultationId}]: prompt={PromptTokens} completion={CompletionTokens} reasoning={ReasoningTokens}",
+                    consultationId,
                     result.Usage.PromptTokens,
                     result.Usage.CompletionTokens,
                     result.Usage.ReasoningTokens?.ToString() ?? "n/a");
             }
             else
             {
-                logger.LogInformation("Consultation completed: no usage reported");
+                logger.LogInformation("Consultation completed [{ConsultationId}]: no usage reported", consultationId);
             }
 
             return ResponseFormatter.FormatSuccess(resolvedModel, normalizedEffort, result.FinishReason, result.Answer);
@@ -131,40 +135,40 @@ internal class Consultant(
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
             // The client's own token fired: no listener exists, so no structured error.
-            logger.LogInformation("Consultation cancelled");
+            logger.LogInformation("Consultation cancelled [{ConsultationId}]", consultationId);
 
             throw;
         }
         catch (VpnNotConnectedException ex)
         {
-            return LogAndReturn(ErrorMessages.VpnNotConnected(ex.Message));
+            return LogAndReturn(consultationId, ErrorMessages.VpnNotConnected(ex.Message));
         }
         catch (ConsultationTimeoutException ex)
         {
-            return LogAndReturn(ErrorMessages.Timeout((int)ex.Timeout.TotalSeconds));
+            return LogAndReturn(consultationId, ErrorMessages.Timeout((int)ex.Timeout.TotalSeconds));
         }
         catch (OpenRouterApiException ex) when (ex.StatusCode is not null)
         {
-            return LogAndReturn(ErrorMessages.HttpNonSuccess(ex.StatusCode.Value, ex.BodyExcerpt));
+            return LogAndReturn(consultationId, ErrorMessages.HttpNonSuccess(ex.StatusCode.Value, ex.BodyExcerpt));
         }
         catch (OpenRouterApiException ex)
         {
-            return LogAndReturn(ErrorMessages.UnusableResponse(ex.BodyExcerpt));
+            return LogAndReturn(consultationId, ErrorMessages.UnusableResponse(ex.BodyExcerpt));
         }
         catch (HttpRequestException ex)
         {
-            return LogAndReturn(ErrorMessages.NetworkFailure(ex.Message));
+            return LogAndReturn(consultationId, ErrorMessages.NetworkFailure(ex.Message));
         }
         catch (Exception ex)
         {
             // Residual class: anything not mapped above, including lazy options-binding failures.
-            return LogAndReturn(ErrorMessages.UnexpectedError(ex.Message));
+            return LogAndReturn(consultationId, ErrorMessages.UnexpectedError(ex.Message));
         }
     }
 
-    private string LogAndReturn(string error)
+    private string LogAndReturn(string consultationId, string error)
     {
-        logger.LogError("{Error}", error);
+        logger.LogError("Consultation failed [{ConsultationId}]: {Error}", consultationId, error);
 
         return error;
     }
