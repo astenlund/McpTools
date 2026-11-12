@@ -47,7 +47,7 @@ internal class Consultant(
             // Step 1: question
             if (string.IsNullOrWhiteSpace(question))
             {
-                return ErrorMessages.EmptyQuestion();
+                return LogAndReturn(consultationId, ErrorMessages.EmptyQuestion());
             }
 
             // Step 2: effort resolution and membership
@@ -56,31 +56,31 @@ internal class Consultant(
                 e => string.Equals(e, resolvedEffort?.Trim(), StringComparison.OrdinalIgnoreCase));
             if (normalizedEffort is null)
             {
-                return ErrorMessages.InvalidEffort(resolvedEffort ?? "(null)");
+                return LogAndReturn(consultationId, ErrorMessages.InvalidEffort(resolvedEffort ?? "(null)"));
             }
 
             // Step 3: model resolution
             var resolvedModel = (string.IsNullOrWhiteSpace(model) ? settings.DefaultModel : model).Trim();
             if (string.IsNullOrWhiteSpace(resolvedModel))
             {
-                return ErrorMessages.MissingDefaultModel();
+                return LogAndReturn(consultationId, ErrorMessages.MissingDefaultModel());
             }
 
             // Step 4: numeric settings positivity
             if (settings.TimeoutSeconds <= 0)
             {
-                return ErrorMessages.NonPositiveSetting(nameof(settings.TimeoutSeconds), settings.TimeoutSeconds);
+                return LogAndReturn(consultationId, ErrorMessages.NonPositiveSetting(nameof(settings.TimeoutSeconds), settings.TimeoutSeconds));
             }
 
             if (settings.MaxAttachmentBytes <= 0)
             {
-                return ErrorMessages.NonPositiveSetting(nameof(settings.MaxAttachmentBytes), settings.MaxAttachmentBytes);
+                return LogAndReturn(consultationId, ErrorMessages.NonPositiveSetting(nameof(settings.MaxAttachmentBytes), settings.MaxAttachmentBytes));
             }
 
             // Step 5: API key presence (blank counts as absent)
             if (string.IsNullOrWhiteSpace(settings.ApiKey))
             {
-                return ErrorMessages.MissingApiKey();
+                return LogAndReturn(consultationId, ErrorMessages.MissingApiKey());
             }
 
             // Step 6: VPN, only when required
@@ -93,7 +93,7 @@ internal class Consultant(
             var validation = FileAttachmentValidator.Validate(files, settings.MaxAttachmentBytes);
             if (validation.Error is not null)
             {
-                return validation.Error;
+                return LogAndReturn(consultationId, validation.Error);
             }
 
             // Step 8: the request

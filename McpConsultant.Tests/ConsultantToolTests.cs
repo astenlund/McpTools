@@ -354,4 +354,35 @@ public class ConsultantToolTests
         Assert.Equal(events[0].Id, events[1].Id);
         Assert.EndsWith(result, logger.Messages[^1]);
     }
+
+    [Fact]
+    public async Task EmptyQuestion_LogsFailedLineWithoutStartedLine()
+    {
+        // Arrange
+        var logger = new CapturingLogger<Consultant>();
+        var (tool, _) = Build(logger: logger);
+
+        // Act
+        var result = await tool.Consult("   ", null, null, null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["failed"], LifecycleEvents(logger).Select(e => e.Event));
+        Assert.EndsWith(result, logger.Messages[^1]);
+    }
+
+    [Fact]
+    public async Task MissingFile_LogsFailedLineWithoutStartedLine()
+    {
+        // Arrange - file validation returns its error through the validator's result, not a direct error-message call
+        var logger = new CapturingLogger<Consultant>();
+        var (tool, _) = Build(logger: logger);
+        var missing = Path.Combine(Path.GetTempPath(), $"consultant-missing-{Guid.NewGuid():N}.txt");
+
+        // Act
+        var result = await tool.Consult("Q", null, [missing], null, null, CancellationToken.None);
+
+        // Assert
+        Assert.Equal(["failed"], LifecycleEvents(logger).Select(e => e.Event));
+        Assert.EndsWith(result, logger.Messages[^1]);
+    }
 }

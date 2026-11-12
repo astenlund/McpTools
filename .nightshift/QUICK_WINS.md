@@ -12,10 +12,6 @@ Capture shorthand: name the refactor, describe the current smell in a sentence o
 
 - **Reword or strengthen the smoke-call threshold in `README_CONSULTANT.md`.** Part two of the registration-time check treats an elapsed time over 100 seconds as establishing the long-running path, but exceeding 100 seconds only proves the client tolerates more than 100 seconds, not the full `TimeoutSeconds` ceiling (300 by default). Either present the criterion as the proxy it is (evidence that `MCP_TOOL_TIMEOUT` overrode Claude Code's shorter built-in default) or extend the procedure to drive a call near the configured ceiling.
 
-## Consultation logging
-
-- **Log validation errors as `Consultation failed` lines.** The `Consult` tool method in `McpConsultant/Tools/Consultant.cs` returns the errors it detects by its own validation before any request (empty question, invalid effort, missing default model, non-positive `TimeoutSeconds` or `MaxAttachmentBytes`, missing API key, file validation failures) without logging anything, while exception-mapped errors go through `LogAndReturn` and log `Consultation failed [id]: <error>`. An operator grepping stderr therefore finds no trace of a rejected call. Route those returns through `LogAndReturn` as well, add a `ConsultantToolTests` case asserting a validation error logs a failed line with the call's ID, and change the Error handling summary in `.nightshift/features/mcp-consultant.md` back to saying every structured error is logged.
-
 ## (add sections as work emerges)
 
 ## History
