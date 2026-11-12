@@ -8,10 +8,6 @@ Capture shorthand: name the refactor, describe the current smell in a sentence o
 
 **After adding a new entry, run `/nightshift:ready`** from the repo root to confirm it parses as a quick-wins work item against the real grammar in `skills/ready/ready.js`. Quick wins carry no `**Requires:**` line; the failure mode to catch is an entry that doesn't parse as a `- ` bullet or `###` heading (ready reports it as a prose-only-section notice) while you can still fix it in the same session.
 
-## Registration-time check
-
-- **Reword or strengthen the smoke-call threshold in `README_CONSULTANT.md`.** Part two of the registration-time check treats an elapsed time over 100 seconds as establishing the long-running path, but exceeding 100 seconds only proves the client tolerates more than 100 seconds, not the full `TimeoutSeconds` ceiling (300 by default). Either present the criterion as the proxy it is (evidence that `MCP_TOOL_TIMEOUT` overrode Claude Code's shorter built-in default) or extend the procedure to drive a call near the configured ceiling.
-
 ## (add sections as work emerges)
 
 ## History

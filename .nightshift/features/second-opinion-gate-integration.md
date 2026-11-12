@@ -14,4 +14,4 @@ Source: fit assessment of McpConsultant against the Nightshift plugin's second-o
 
 ## Deployment precondition worth noting
 
-The hardened-spec gate reads a full spec at `effort: max`, which is exactly the long-running call the README's registration-time check exists for. A correctly configured `MCP_TOOL_TIMEOUT` is therefore a hard precondition for gate use, and the shipped per-consultation correlation ID (see [QUICK_WINS_HISTORY.md](../QUICK_WINS_HISTORY.md)) together with the remaining threshold-rewording quick win in [QUICK_WINS.md](../QUICK_WINS.md) make that check trustworthy.
+The hardened-spec gate reads a full spec at `effort: max`, which is exactly the long-running call the README's registration-time check exists for. A correctly configured `MCP_TOOL_TIMEOUT` is therefore a hard precondition for gate use, and the shipped per-consultation correlation ID and smoke-call threshold rewording (both archived in [QUICK_WINS_HISTORY.md](../QUICK_WINS_HISTORY.md)) make that check unambiguous and explicit about what it proves.
